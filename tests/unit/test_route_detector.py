@@ -15,11 +15,12 @@ def test_get_route():
 def list_users():
     pass
 """
-    routes = _routes(code)
-    assert len(routes) == 1
-    assert routes[0].method == HttpMethod.GET
-    assert routes[0].route_path == "/users"
-    assert routes[0].handler_function == "list_users"
+    results = _routes(code)
+    assert len(results) == 1
+    route, sym = results[0]
+    assert route.method == HttpMethod.GET
+    assert route.route_path == "/users"
+    assert route.handler_function == "list_users"
 
 
 def test_post_route():
@@ -28,9 +29,10 @@ def test_post_route():
 def create_user():
     pass
 """
-    routes = _routes(code)
-    assert len(routes) == 1
-    assert routes[0].method == HttpMethod.POST
+    results = _routes(code)
+    assert len(results) == 1
+    route, sym = results[0]
+    assert route.method == HttpMethod.POST
 
 
 def test_put_route():
@@ -39,9 +41,10 @@ def test_put_route():
 def update_user():
     pass
 """
-    routes = _routes(code)
-    assert len(routes) == 1
-    assert routes[0].method == HttpMethod.PUT
+    results = _routes(code)
+    assert len(results) == 1
+    route, sym = results[0]
+    assert route.method == HttpMethod.PUT
 
 
 def test_delete_route():
@@ -50,9 +53,10 @@ def test_delete_route():
 def delete_user():
     pass
 """
-    routes = _routes(code)
-    assert len(routes) == 1
-    assert routes[0].method == HttpMethod.DELETE
+    results = _routes(code)
+    assert len(results) == 1
+    route, sym = results[0]
+    assert route.method == HttpMethod.DELETE
 
 
 def test_patch_route():
@@ -61,9 +65,10 @@ def test_patch_route():
 def patch_user():
     pass
 """
-    routes = _routes(code)
-    assert len(routes) == 1
-    assert routes[0].method == HttpMethod.PATCH
+    results = _routes(code)
+    assert len(results) == 1
+    route, sym = results[0]
+    assert route.method == HttpMethod.PATCH
 
 
 def test_all_five_methods():
@@ -79,9 +84,9 @@ def d(): pass
 @app.patch("/e")
 def e(): pass
 """
-    routes = _routes(code)
-    assert len(routes) == 5
-    methods = {r.method for r in routes}
+    results = _routes(code)
+    assert len(results) == 5
+    methods = {r[0].method for r in results}
     assert methods == {HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT, HttpMethod.DELETE, HttpMethod.PATCH}
 
 
@@ -91,19 +96,21 @@ def test_route_id_format():
 def list_users():
     pass
 """
-    routes = _routes(code)
-    assert "route:GET:" in routes[0].route_id
-    assert routes[0].route_id.endswith(":routes.py:3")
+    results = _routes(code)
+    route, sym = results[0]
+    assert "route:GET:" in route.route_id
+    assert route.route_id.endswith(":routes.py:3")
 
 
-def test_start_line():
+def test_start_line_is_decorator_line():
     code = """
 @app.get("/items")
 def list_items():
     pass
 """
-    routes = _routes(code)
-    assert routes[0].start_line == 3
+    results = _routes(code)
+    route, sym = results[0]
+    assert route.start_line == 2
 
 
 def test_multiple_routes():
@@ -114,30 +121,62 @@ def a(): pass
 @app.post("/b")
 def b(): pass
 """
-    routes = _routes(code)
-    assert len(routes) == 2
-    assert routes[0].route_path == "/a"
-    assert routes[1].route_path == "/b"
+    results = _routes(code)
+    assert len(results) == 2
+    assert results[0][0].route_path == "/a"
+    assert results[1][0].route_path == "/b"
 
 
-def test_flask_route_decorator():
+def test_router_decorator():
     code = """
-@app.route("/users")
-def users():
+@router.get("/items")
+def list_items():
     pass
 """
-    routes = _routes(code)
-    assert len(routes) == 1
-    assert routes[0].method == HttpMethod.GET
-    assert routes[0].route_path == "/users"
+    results = _routes(code)
+    assert len(results) == 1
+    assert results[0][0].handler_function == "list_items"
 
 
-def test_flask_route_with_methods():
+def test_dynamic_expression_skipped():
     code = """
-@app.route("/users", methods=["POST"])
-def create_user():
+@app.get(path_var)
+def handler():
     pass
 """
-    routes = _routes(code)
-    assert len(routes) == 1
-    assert routes[0].method == HttpMethod.POST
+    results = _routes(code)
+    assert len(results) == 0
+
+
+def test_shared_uuid():
+    code = """
+@app.get("/users")
+def list_users():
+    pass
+"""
+    results = _routes(code)
+    route, sym = results[0]
+    assert sym.symbol_id == route.route_id
+
+
+def test_route_symbol_type():
+    code = """
+@app.get("/users")
+def list_users():
+    pass
+"""
+    results = _routes(code)
+    route, sym = results[0]
+    from fcode.contracts import SymbolType
+    assert sym.symbol_type == SymbolType.ROUTE
+
+
+def test_route_symbol_name():
+    code = """
+@app.get("/users")
+def list_users():
+    pass
+"""
+    results = _routes(code)
+    route, sym = results[0]
+    assert sym.name == "GET /users"

@@ -2,141 +2,230 @@
 
 import os
 import tempfile
-
-from fcode.contracts import FCodeConfig, FileType, RepoInput
-from fcode.scanner.file_scanner import scan_repository
-
-
-def _cfg():
-    return FCodeConfig()
+from fcode.contracts import FCodeConfig, FileType, ParseStatus, RepoInput
+from fcode.scanner.file_scanner import scan
 
 
-def _repo(tmp):
-    return RepoInput(repo_path=tmp)
+def _repo(tmpdir: str) -> RepoInput:
+    return RepoInput(repo_path=tmpdir)
 
 
-def test_invalid_path():
-    result = scan_repository(RepoInput(repo_path="/nonexistent_path_xyz"), _cfg())
-    assert result.total_count == 0
+def _config(tmpdir: str) -> FCodeConfig:
+    return FCodeConfig(repo_path=tmpdir)
 
 
-def test_empty_repository():
+def test_scan_returns_scanresult():
     with tempfile.TemporaryDirectory() as tmp:
-        result = scan_repository(_repo(tmp), _cfg())
-        assert result.total_count == 0
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        assert hasattr(result, "files")
+        assert hasattr(result, "skipped")
 
 
-def test_python_source():
+def test_scan_python_file():
     with tempfile.TemporaryDirectory() as tmp:
-        with open(os.path.join(tmp, "main.py"), "w") as f:
-            f.write("x = 1\n")
-        result = scan_repository(_repo(tmp), _cfg())
-        assert result.total_count == 1
+        with open(os.path.join(tmp, "hello.py"), "w") as f:
+            f.write("print('hello')\n")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        assert len(result.files) == 1
+        assert result.files[0].file_path == "hello.py"
+        assert result.files[0].language == "Python"
+
+
+def test_scan_empty_directory():
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        assert result.files == []
+
+
+def test_scan_non_python_included():
+    with tempfile.TemporaryDirectory() as tmp:
+        with open(os.path.join(tmp, "data.txt"), "w") as f:
+            f.write("hello")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        assert len(result.files) >= 1
+        assert result.files[0].file_path == "data.txt"
+        assert result.files[0].language is None
+
+
+def test_scan_nested_file():
+    with tempfile.TemporaryDirectory() as tmp:
+        sub = os.path.join(tmp, "sub")
+        os.makedirs(sub)
+        with open(os.path.join(sub, "mod.py"), "w") as f:
+            f.write("# ok")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        assert len(result.files) == 1
+        assert result.files[0].file_path == "sub/mod.py"
+
+
+def test_scan_file_id_format():
+    with tempfile.TemporaryDirectory() as tmp:
+        with open(os.path.join(tmp, "mod.py"), "w") as f:
+            f.write("x=1")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        assert result.files[0].file_id.startswith("file:")
+
+
+def test_scan_file_id_unique():
+    with tempfile.TemporaryDirectory() as tmp:
+        os.makedirs(os.path.join(tmp, "a"))
+        os.makedirs(os.path.join(tmp, "b"))
+        with open(os.path.join(tmp, "a", "mod.py"), "w") as f:
+            f.write("x=1")
+        with open(os.path.join(tmp, "b", "mod.py"), "w") as f:
+            f.write("y=2")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        assert len(result.files) == 2
+        assert result.files[0].file_id != result.files[1].file_id
+
+
+def test_scan_deterministic_ordering():
+    with tempfile.TemporaryDirectory() as tmp:
+        with open(os.path.join(tmp, "z.py"), "w") as f:
+            f.write("z")
+        with open(os.path.join(tmp, "a.py"), "w") as f:
+            f.write("a")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        names = [os.path.basename(f.file_path) for f in result.files]
+        assert names == sorted(names)
+
+
+def test_scan_absolute_path():
+    with tempfile.TemporaryDirectory() as tmp:
+        with open(os.path.join(tmp, "mod.py"), "w") as f:
+            f.write("x=1")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        for sf in result.files:
+            assert os.path.isabs(sf.absolute_path)
+
+
+def test_scan_line_count():
+    with tempfile.TemporaryDirectory() as tmp:
+        with open(os.path.join(tmp, "mod.py"), "w") as f:
+            f.write("a\nb\nc\n")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        assert result.files[0].line_count == 3
+
+
+def test_scan_file_type_source():
+    with tempfile.TemporaryDirectory() as tmp:
+        with open(os.path.join(tmp, "app.py"), "w") as f:
+            f.write("x=1")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
         assert result.files[0].file_type == FileType.SOURCE
 
 
-def test_test_classification():
+def test_scan_file_type_test():
     with tempfile.TemporaryDirectory() as tmp:
-        with open(os.path.join(tmp, "test_main.py"), "w") as f:
-            f.write("def test_x(): pass\n")
-        result = scan_repository(_repo(tmp), _cfg())
-        assert result.total_count == 1
-        assert result.files[0].file_type == FileType.TEST
+        with open(os.path.join(tmp, "test_app.py"), "w") as f:
+            f.write("x=1")
+        with open(os.path.join(tmp, "app_test.py"), "w") as f:
+            f.write("x=1")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        test_files = [sf for sf in result.files if sf.file_type == FileType.TEST]
+        assert len(test_files) == 2
 
 
-def test_markdown_doc():
+def test_scan_has_secrets_false():
     with tempfile.TemporaryDirectory() as tmp:
-        with open(os.path.join(tmp, "README.md"), "w") as f:
-            f.write("# Title\n")
-        result = scan_repository(_repo(tmp), _cfg())
-        assert result.total_count == 1
-        assert result.files[0].file_type == FileType.DOC
+        with open(os.path.join(tmp, "mod.py"), "w") as f:
+            f.write("x=1")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        assert result.files[0].has_secrets is False
 
 
-def test_config_file():
+def test_scan_has_secrets_true():
     with tempfile.TemporaryDirectory() as tmp:
-        with open(os.path.join(tmp, "config.json"), "w") as f:
-            f.write('{"key": "val"}\n')
-        result = scan_repository(_repo(tmp), _cfg())
-        assert result.total_count == 1
-        assert result.files[0].file_type == FileType.CONFIG
+        with open(os.path.join(tmp, "mod.py"), "w") as f:
+            f.write('TOKEN = "sk-abc123xyzABCdef456"\n')
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        secret_files = [sf for sf in result.files if sf.has_secrets]
+        assert len(secret_files) >= 1
 
 
-def test_oversized_file():
+def test_scan_parse_status_pending():
     with tempfile.TemporaryDirectory() as tmp:
-        fpath = os.path.join(tmp, "big.py")
-        with open(fpath, "wb") as f:
-            f.write(b"x\n" * (2 * 1024 * 1024))
-        with open(os.path.join(tmp, "small.py"), "w") as f:
-            f.write("x = 1\n")
-        result = scan_repository(_repo(tmp), _cfg())
-        assert result.total_count == 1
-        skipped_reasons = [s.reason for s in result.skipped]
-        assert "file_skipped" in skipped_reasons
+        with open(os.path.join(tmp, "mod.py"), "w") as f:
+            f.write("x=1")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        assert result.files[0].parse_status == ParseStatus.PENDING
 
 
-def test_binary_file():
+def test_scan_binary_detection():
     with tempfile.TemporaryDirectory() as tmp:
-        with open(os.path.join(tmp, "img.png"), "wb") as f:
-            f.write(b"\x89PNG\r\n\x1a\n")
-        with open(os.path.join(tmp, "app.py"), "w") as f:
-            f.write("x = 1\n")
-        result = scan_repository(_repo(tmp), _cfg())
-        assert result.total_count == 2
-        binary = [f for f in result.files if f.is_binary]
+        path = os.path.join(tmp, "data.py")
+        with open(path, "wb") as f:
+            f.write(b"\xff\xff")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        binary = [sf for sf in result.files if sf.is_binary]
         assert len(binary) >= 1
 
 
-def test_env_file_excluded():
+def test_ignore_patterns():
     with tempfile.TemporaryDirectory() as tmp:
-        with open(os.path.join(tmp, ".env"), "w") as f:
-            f.write("API_KEY=secret\n")
-        with open(os.path.join(tmp, "app.py"), "w") as f:
-            f.write("x = 1\n")
-        result = scan_repository(_repo(tmp), _cfg())
-        assert result.total_count == 1
+        with open(os.path.join(tmp, "mod.py"), "w") as f:
+            f.write("x=1")
+        with open(os.path.join(tmp, "ignored.py"), "w") as f:
+            f.write("y=2")
+        with open(os.path.join(tmp, ".fcodeignore"), "w") as f:
+            f.write("ignored.py\n")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        assert len(result.files) >= 1
+        paths = [sf.file_path for sf in result.files]
+        assert "mod.py" in paths
+        assert "ignored.py" not in paths
 
 
-def test_gitignore_respected():
+def test_empty_file_skipped():
     with tempfile.TemporaryDirectory() as tmp:
-        with open(os.path.join(tmp, ".gitignore"), "w") as f:
-            f.write("build/\n*.log\n")
-        os.makedirs(os.path.join(tmp, "build"), exist_ok=True)
-        with open(os.path.join(tmp, "build", "out.o"), "w") as f:
-            f.write("data")
-        with open(os.path.join(tmp, "app.log"), "w") as f:
-            f.write("error")
-        with open(os.path.join(tmp, "main.py"), "w") as f:
-            f.write("x = 1\n")
-        result = scan_repository(_repo(tmp), _cfg())
-        assert result.total_count == 2
-        assert any("ignored_by_rules" in s.reason for s in result.skipped)
+        with open(os.path.join(tmp, "empty.py"), "w") as f:
+            f.write("")
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        assert len(result.files) == 0
+        assert len(result.skipped) >= 1
 
 
-def test_fcode_dir_excluded():
+def test_warning_count_on_secret():
     with tempfile.TemporaryDirectory() as tmp:
-        fcode = os.path.join(tmp, ".fcode")
-        os.makedirs(fcode)
-        with open(os.path.join(fcode, "config.json"), "w") as f:
-            f.write("{}")
-        with open(os.path.join(tmp, "main.py"), "w") as f:
-            f.write("x = 1\n")
-        result = scan_repository(_repo(tmp), _cfg())
-        assert result.total_count == 1
-
-
-def test_content_hash():
-    with tempfile.TemporaryDirectory() as tmp:
-        with open(os.path.join(tmp, "a.py"), "w") as f:
-            f.write("x = 1\n")
-        result = scan_repository(_repo(tmp), _cfg())
-        assert len(result.files[0].content_hash) == 64
-
-
-def test_secret_redacted_in_content():
-    with tempfile.TemporaryDirectory() as tmp:
-        with open(os.path.join(tmp, "config.py"), "w") as f:
-            f.write('API_KEY="sk_test_abcdefghijklmnopqrstuvwxyz"\n')
-        result = scan_repository(_repo(tmp), _cfg())
-        assert result.total_count == 1
-        assert "[REDACTED]" in result.files[0].safe_content
+        with open(os.path.join(tmp, "secret.py"), "w") as f:
+            f.write('TOKEN = "ghp_ABCdef789GHIJklmnop"\n')
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        assert result.warning_count >= 1

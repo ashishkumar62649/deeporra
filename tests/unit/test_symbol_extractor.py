@@ -31,6 +31,25 @@ def test_class():
     assert syms[0].symbol_type == SymbolType.CLASS
 
 
+def test_method():
+    code = "class Foo:\n    def bar(self):\n        pass\n"
+    tree = ast.parse(code)
+    syms = list(extract_symbols(tree, "module.py"))
+    assert len(syms) == 2
+    methods = [s for s in syms if s.symbol_type == SymbolType.METHOD]
+    assert len(methods) == 1
+    assert methods[0].name == "bar"
+
+
+def test_async_method():
+    code = "class Foo:\n    async def bar(self):\n        pass\n"
+    tree = ast.parse(code)
+    syms = list(extract_symbols(tree, "module.py"))
+    methods = [s for s in syms if s.symbol_type == SymbolType.METHOD]
+    assert len(methods) == 1
+    assert methods[0].name == "bar"
+
+
 def test_nested_function():
     code = "def outer():\n    def inner():\n        pass\n    pass\n"
     tree = ast.parse(code)
@@ -46,6 +65,15 @@ def test_duplicate_names():
     syms = list(extract_symbols(tree, "module.py"))
     foos = [s for s in syms if s.name == "foo"]
     assert len(foos) == 2
+
+
+def test_variable():
+    code = "x = 42\n"
+    tree = ast.parse(code)
+    syms = list(extract_symbols(tree, "module.py"))
+    vars_ = [s for s in syms if s.symbol_type == SymbolType.VARIABLE]
+    assert len(vars_) == 1
+    assert vars_[0].name == "x"
 
 
 def test_docstring():
@@ -74,3 +102,22 @@ def test_deterministic_ordering():
     syms = list(extract_symbols(tree, "module.py"))
     names = [s.name for s in syms]
     assert names == ["b", "a"]
+
+
+def test_parent_relationship():
+    code = "class Outer:\n    class Inner:\n        def method(self): pass\n"
+    tree = ast.parse(code)
+    syms = list(extract_symbols(tree, "module.py"))
+    methods = [s for s in syms if s.symbol_type == SymbolType.METHOD]
+    assert len(methods) == 1
+    assert methods[0].parent == "Inner"
+    assert methods[0].qualified_name == "Outer.Inner.method"
+
+
+def test_qualified_name():
+    code = "class Foo:\n    def bar(self): pass\n"
+    tree = ast.parse(code)
+    syms = list(extract_symbols(tree, "module.py"))
+    method = [s for s in syms if s.symbol_type == SymbolType.METHOD][0]
+    assert method.qualified_name == "Foo.bar"
+    assert method.parent == "Foo"
