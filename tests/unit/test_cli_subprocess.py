@@ -5,6 +5,8 @@ import subprocess
 import sys
 import shutil
 
+import pytest
+
 
 def _invoke(*args: str) -> subprocess.CompletedProcess:
     """Run python -m fcode <args> and capture stdout, stderr, return code."""
@@ -46,7 +48,6 @@ class TestIndex:
         assert "Index command implementation has not started." in result.stdout
 
     def test_index_no_fcode_dir_created(self):
-        # Ensure .fcode/ does NOT exist before and after
         fcode_dir = os.path.join(os.getcwd(), ".fcode")
         existed_before = os.path.isdir(fcode_dir)
         _invoke("index", ".")
@@ -69,13 +70,21 @@ class TestStatus:
 
 
 class TestDoctor:
-    def test_doctor_placeholder_exit_code(self):
+    def test_doctor_exit_code(self):
         result = _invoke("doctor")
-        assert result.returncode == 1
+        assert result.returncode == 0
 
-    def test_doctor_placeholder_message(self):
+    def test_doctor_shows_check_results(self):
         result = _invoke("doctor")
-        assert "Doctor command implementation has not started." in result.stdout
+        assert "[PASS]" in result.stdout or "[FAIL]" in result.stdout
+
+    def test_doctor_python_version_check(self):
+        result = _invoke("doctor")
+        assert "python_version" in result.stdout
+
+    def test_doctor_required_imports_check(self):
+        result = _invoke("doctor")
+        assert "required_imports" in result.stdout
 
 
 class TestDashboard:
