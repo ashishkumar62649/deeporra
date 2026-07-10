@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# F Code runtime data
+fcode_data/
+.fcode/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Testing
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Graphify output (development only)
+graphify-out/
+GRAPH_REPORT.md

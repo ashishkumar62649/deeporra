@@ -1,0 +1,133 @@
+"""F Code shared contracts — canonical enums, models, errors, and interfaces.
+
+All feature agents import from this package.
+No feature module may duplicate these definitions.
+WP0 is owned by the Integration/Contracts Agent.
+"""
+
+from fcode.contracts.enums import (
+    ChunkType,
+    Confidence,
+    DiagnosticSeverity,
+    FileType,
+    GraphNodeType,
+    GraphRelation,
+    HttpMethod,
+    IndexPhase,
+    IndexState,
+    ParseStatus,
+    SearchMode,
+    SupportedSetupAgent,
+    SymbolType,
+)
+
+from fcode.contracts.models import (
+    CodeChunk,
+    DoctorCheck,
+    DoctorResult,
+    EmbeddingBatchResult,
+    EmbeddingInput,
+    EmbeddingMetadata,
+    EmbeddingRecord,
+    EvidenceItem,
+    FCodeConfig,
+    GraphBuildResult,
+    GraphEdgeInput,
+    GraphNodeInput,
+    IndexCounts,
+    IndexDiagnostic,
+    IndexRunResult,
+    IndexStatusRecord,
+    ParsedFile,
+    ParsedImport,
+    ParsedRoute,
+    ParsedSymbol,
+    RepoInput,
+    RetrievalCandidate,
+    ScanResult,
+    ScannedFile,
+    SkippedFileDiagnostic,
+    StoredChunkRef,
+    ToolError,
+    ToolResult,
+)
+
+from fcode.contracts.errors import (
+    ErrorCode,
+    McpErrorCode,
+)
+
+from fcode.contracts.interfaces import (
+    ChromaStoreProtocol,
+    ChunkerProtocol,
+    EmbeddingEncoderProtocol,
+    FTSStoreProtocol,
+    GraphBuilderProtocol,
+    GraphStoreProtocol,
+    IndexServiceProtocol,
+    PythonParserProtocol,
+    ScannerProtocol,
+    SQLiteStoreProtocol,
+    StatusServiceProtocol,
+)
+
+__all__ = [
+    # enums
+    "ChunkType",
+    "Confidence",
+    "DiagnosticSeverity",
+    "FileType",
+    "GraphNodeType",
+    "GraphRelation",
+    "HttpMethod",
+    "IndexPhase",
+    "IndexState",
+    "ParseStatus",
+    "SearchMode",
+    "SupportedSetupAgent",
+    "SymbolType",
+    # models
+    "CodeChunk",
+    "DoctorCheck",
+    "DoctorResult",
+    "EmbeddingBatchResult",
+    "EmbeddingInput",
+    "EmbeddingMetadata",
+    "EmbeddingRecord",
+    "EvidenceItem",
+    "FCodeConfig",
+    "GraphBuildResult",
+    "GraphEdgeInput",
+    "GraphNodeInput",
+    "IndexCounts",
+    "IndexDiagnostic",
+    "IndexRunResult",
+    "IndexStatusRecord",
+    "ParsedFile",
+    "ParsedImport",
+    "ParsedRoute",
+    "ParsedSymbol",
+    "RepoInput",
+    "RetrievalCandidate",
+    "ScanResult",
+    "ScannedFile",
+    "SkippedFileDiagnostic",
+    "StoredChunkRef",
+    "ToolError",
+    "ToolResult",
+    # errors
+    "ErrorCode",
+    "McpErrorCode",
+    # interfaces
+    "ChromaStoreProtocol",
+    "ChunkerProtocol",
+    "EmbeddingEncoderProtocol",
+    "FTSStoreProtocol",
+    "GraphBuilderProtocol",
+    "GraphStoreProtocol",
+    "IndexServiceProtocol",
+    "PythonParserProtocol",
+    "ScannerProtocol",
+    "SQLiteStoreProtocol",
+    "StatusServiceProtocol",
+]
