@@ -37,20 +37,31 @@ class EmbeddingInput:
 
 @dataclass
 class GraphNodeInput:
-    external_id: str
-    node_type: GraphNodeType
-    label: str
+    record_id: str = ""
+    external_id: str = ""
+    node_type: GraphNodeType = GraphNodeType.FILE
+    label: str = ""
     properties: dict[str, Any] = field(default_factory=dict)
     confidence: Confidence = Confidence.EXTRACTED
+    node_id: str = ""
+    source_file: str = ""
+    source_location: str = ""
+    metadata: Optional[dict[str, Any]] = None
 
 
 @dataclass
 class GraphEdgeInput:
-    source_external_id: str
-    target_external_id: str
-    relation: GraphRelation
+    record_id: str = ""
+    source_external_id: str = ""
+    target_external_id: str = ""
+    relation: GraphRelation = GraphRelation.DEFINES
     properties: dict[str, Any] = field(default_factory=dict)
     confidence: Confidence = Confidence.EXTRACTED
+    source_node_id: str = ""
+    target_node_id: str = ""
+    source_file: str = ""
+    source_location: str = ""
+    metadata: Optional[dict[str, Any]] = None
 
 
 # ── Metadata ────────────────────────────────────────────────────────────────
@@ -70,16 +81,25 @@ class EmbeddingMetadata:
 
 @dataclass
 class ScannedFile:
-    file_path: str
-    file_type: FileType
-    size_bytes: int
+    file_path: str = ""
+    file_type: FileType = FileType.SOURCE
+    size_bytes: int = 0
     is_binary: bool = False
+    file_id: str = ""
+    absolute_path: str = ""
+    language: Optional[str] = None
+    has_secrets: bool = False
+    content_hash: str = ""
+    parse_status: ParseStatus = ParseStatus.NOT_APPLICABLE
+    safe_content: str = ""
+    line_count: int = 0
 
 
 @dataclass
 class SkippedFileDiagnostic:
     file_path: str
     reason: str
+    details: str = ""
     severity: DiagnosticSeverity = DiagnosticSeverity.WARNING
 
 
@@ -89,6 +109,10 @@ class ScanResult:
     skipped: list[SkippedFileDiagnostic] = field(default_factory=list)
     total_count: int = 0
     total_bytes: int = 0
+    eligible_file_count: int = 0
+    eligible_total_bytes: int = 0
+    warnings: list[dict] = field(default_factory=list)
+    warning_count: int = 0
 
 
 # ── Parse results ───────────────────────────────────────────────────────────
@@ -96,41 +120,60 @@ class ScanResult:
 
 @dataclass
 class ParsedSymbol:
-    name: str
-    symbol_type: SymbolType
-    start_line: int
-    end_line: int
+    name: str = ""
+    symbol_type: SymbolType = SymbolType.FUNCTION
+    start_line: int = 0
+    end_line: int = 0
     parent: Optional[str] = None
     docstring: Optional[str] = None
     confidence: Confidence = Confidence.EXTRACTED
+    symbol_id: str = ""
+    file_id: str = ""
+    qualified_name: str = ""
+    signature: Optional[str] = None
+    parent_symbol_id: Optional[str] = None
+    metadata: Optional[dict[str, Any]] = None
 
 
 @dataclass
 class ParsedImport:
-    module: str
-    names: list[str]
-    start_line: int
+    module_name: str = ""
+    imported_names: list[str] = field(default_factory=list)
+    line_number: int = 0
     is_relative: bool = False
     confidence: Confidence = Confidence.EXTRACTED
+    file_id: str = ""
+    alias: Optional[str] = None
 
 
 @dataclass
 class ParsedRoute:
-    method: HttpMethod
-    path: str
-    handler: str
-    start_line: int
+    route_id: str = ""
+    file_id: str = ""
+    method: HttpMethod = HttpMethod.GET
+    route_path: str = ""
+    handler_function: str = ""
+    start_line: int = 0
+    signature: Optional[str] = None
+    docstring: Optional[str] = None
+    decorators: list[str] = field(default_factory=list)
     confidence: Confidence = Confidence.INFERRED
+    metadata: Optional[dict[str, Any]] = None
 
 
 @dataclass
 class ParsedFile:
-    file_path: str
-    status: ParseStatus
+    file_path: str = ""
+    file_type: FileType = FileType.SOURCE
+    status: ParseStatus = ParseStatus.PENDING
     symbols: list[ParsedSymbol] = field(default_factory=list)
     imports: list[ParsedImport] = field(default_factory=list)
     routes: list[ParsedRoute] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    file_id: str = ""
+    docstring: Optional[str] = None
+    line_count: int = 0
+    parse_error: Optional[str] = None
 
 
 # ── Graph results ───────────────────────────────────────────────────────────
@@ -141,6 +184,8 @@ class GraphBuildResult:
     node_count: int = 0
     edge_count: int = 0
     errors: list[str] = field(default_factory=list)
+    nodes: list[GraphNodeInput] = field(default_factory=list)
+    edges: list[GraphEdgeInput] = field(default_factory=list)
 
 
 # ── Chunk and embedding results ─────────────────────────────────────────────

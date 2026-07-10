@@ -4,7 +4,7 @@ Each feature module's public interface is defined here.
 Storage, pipeline, and service modules depend on protocols, not concrete classes.
 """
 
-from typing import Optional
+from typing import Optional, Sequence
 from typing_extensions import Protocol
 from fcode.contracts.models import (
     CodeChunk,
@@ -20,20 +20,21 @@ from fcode.contracts.models import (
     ParsedFile,
     RepoInput,
     ScanResult,
+    ScannedFile,
     StoredChunkRef,
 )
 
 
 class ScannerProtocol(Protocol):
-    def scan(self, repo: RepoInput) -> ScanResult: ...
+    def scan(self, repo: RepoInput, config: FCodeConfig) -> ScanResult: ...
 
 
 class PythonParserProtocol(Protocol):
-    def parse(self, file_path: str, content: str) -> ParsedFile: ...
+    def parse(self, file: ScannedFile) -> ParsedFile: ...
 
 
 class GraphBuilderProtocol(Protocol):
-    def build(self, parsed_files: list[ParsedFile]) -> GraphBuildResult: ...
+    def build(self, parsed_files: Sequence[ParsedFile]) -> GraphBuildResult: ...
 
 
 class ChunkerProtocol(Protocol):

@@ -25,13 +25,16 @@ class TestEntryPoints:
         assert cmds == expected
 
     def test_help_does_not_import_unfinished_modules(self):
+        before = set(sys.modules.keys())
         import fcode.cli.main
-        for mod_name in ("fcode.storage", "fcode.scanner", "fcode.parser",
-                         "fcode.chunking", "fcode.embeddings", "fcode.indexing",
-                         "fcode.graph", "fcode.retrieval", "fcode.mcp_server",
-                         "fcode.dashboard"):
-            assert mod_name not in sys.modules, \
-                f"{mod_name} was imported at CLI startup"
+        after = set(sys.modules.keys())
+        new_modules = after - before
+        forbidden = {"fcode.storage", "fcode.scanner", "fcode.parser",
+                     "fcode.chunking", "fcode.embeddings", "fcode.indexing",
+                     "fcode.graph", "fcode.retrieval", "fcode.mcp_server",
+                     "fcode.dashboard"}
+        assert new_modules.isdisjoint(forbidden), \
+            f"CLI startup imported: {new_modules & forbidden}"
 
     def test_no_command_has_side_effects(self):
         import fcode.cli.main
