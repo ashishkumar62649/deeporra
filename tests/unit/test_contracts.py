@@ -25,11 +25,15 @@ class TestEnums:
         assert [p.name for p in phases] == expected
 
     def test_index_state_values(self):
-        assert IndexState.IDLE.value == "idle"
-        assert IndexState.RUNNING.value == "running"
-        assert IndexState.PASSED.value == "passed"
-        assert IndexState.FAILED.value == "failed"
-        assert IndexState.PARTIAL.value == "partial"
+        assert IndexState.PENDING.value == "pending"
+        assert IndexState.SCANNING.value == "scanning"
+        assert IndexState.PARSING.value == "parsing"
+        assert IndexState.CHUNKING.value == "chunking"
+        assert IndexState.EMBEDDING.value == "embedding"
+        assert IndexState.GRAPHING.value == "graphing"
+        assert IndexState.STORING.value == "storing"
+        assert IndexState.COMPLETE.value == "complete"
+        assert IndexState.ERROR.value == "error"
 
     def test_error_codes(self):
         assert ErrorCode.REPOSITORY_LIMIT_EXCEEDED.value == "repository_limit_exceeded"
@@ -41,52 +45,63 @@ class TestEnums:
         assert McpErrorCode.NO_INDEX.value == "no_index"
 
     def test_confidence_values(self):
-        assert Confidence.EXTRACTED.value == "extracted"
-        assert Confidence.INFERRED.value == "inferred"
-        assert Confidence.AMBIGUOUS.value == "ambiguous"
+        assert Confidence.EXTRACTED.value == "EXTRACTED"
+        assert Confidence.INFERRED.value == "INFERRED"
+        assert Confidence.AMBIGUOUS.value == "AMBIGUOUS"
 
     def test_symbol_type_values(self):
-        assert SymbolType.CLASS.value == "class"
         assert SymbolType.FUNCTION.value == "function"
+        assert SymbolType.CLASS.value == "class"
         assert SymbolType.METHOD.value == "method"
+        assert SymbolType.ROUTE.value == "route"
+        assert SymbolType.VARIABLE.value == "variable"
 
     def test_graph_node_type_values(self):
         assert GraphNodeType.FILE.value == "file"
-        assert GraphNodeType.SYMBOL.value == "symbol"
-        assert GraphNodeType.CHUNK.value == "chunk"
+        assert GraphNodeType.FUNCTION.value == "function"
+        assert GraphNodeType.CLASS.value == "class"
+        assert GraphNodeType.METHOD.value == "method"
+        assert GraphNodeType.ROUTE.value == "route"
+        assert GraphNodeType.IMPORT.value == "import"
+        assert GraphNodeType.TEST.value == "test"
 
     def test_graph_relation_values(self):
-        assert GraphRelation.CONTAINS.value == "contains"
-        assert GraphRelation.IMPORTS.value == "imports"
-        assert GraphRelation.CALLS.value == "calls"
-        assert GraphRelation.INHERITS.value == "inherits"
         assert GraphRelation.DEFINES.value == "defines"
+        assert GraphRelation.IMPORTS.value == "imports"
+        assert GraphRelation.INHERITS.value == "inherits"
+        assert GraphRelation.CALLS.value == "calls"
+        assert GraphRelation.TESTS.value == "tests"
+        assert GraphRelation.HANDLES_ROUTE.value == "handles_route"
 
     def test_parse_status_values(self):
         assert ParseStatus.PENDING.value == "pending"
         assert ParseStatus.PARSED.value == "parsed"
-        assert ParseStatus.FAILED.value == "failed"
-        assert ParseStatus.SKIPPED.value == "skipped"
+        assert ParseStatus.ERROR.value == "error"
+        assert ParseStatus.NOT_APPLICABLE.value == "not_applicable"
 
     def test_chunk_type_values(self):
-        assert ChunkType.CODE.value == "code"
-        assert ChunkType.DOCSTRING.value == "docstring"
-        assert ChunkType.COMMENT.value == "comment"
-        assert ChunkType.MARKDOWN.value == "markdown"
+        assert ChunkType.FILE_SUMMARY.value == "file_summary"
+        assert ChunkType.FUNCTION.value == "function"
+        assert ChunkType.CLASS.value == "class"
+        assert ChunkType.METHOD.value == "method"
+        assert ChunkType.ROUTE.value == "route"
+        assert ChunkType.TEST.value == "test"
+        assert ChunkType.CONFIG.value == "config"
+        assert ChunkType.README_SECTION.value == "readme_section"
 
     def test_file_type_values(self):
-        assert FileType.PYTHON.value == "python"
-        assert FileType.UNKNOWN.value == "unknown"
+        assert FileType.SOURCE.value == "source"
+        assert FileType.TEST.value == "test"
+        assert FileType.CONFIG.value == "config"
+        assert FileType.DOC.value == "doc"
 
     def test_http_method_values(self):
         assert HttpMethod.GET.value == "GET"
         assert HttpMethod.POST.value == "POST"
 
     def test_search_mode_values(self):
-        assert SearchMode.EXACT.value == "exact"
-        assert SearchMode.KEYWORD.value == "keyword"
-        assert SearchMode.VECTOR.value == "vector"
-        assert SearchMode.HYBRID.value == "hybrid"
+        assert SearchMode.FTS5.value == "fts5"
+        assert SearchMode.LIKE_FALLBACK.value == "like_fallback"
 
     def test_diagnostic_severity_values(self):
         assert DiagnosticSeverity.WARNING.value == "warning"
@@ -112,12 +127,12 @@ class TestModels:
 
     def test_index_run_result_defaults(self):
         from fcode.contracts import IndexRunResult, IndexState, IndexPhase
-        r = IndexRunResult(state=IndexState.IDLE, phase=IndexPhase.SCAN)
-        assert r.state == IndexState.IDLE
+        r = IndexRunResult(state=IndexState.PENDING, phase=IndexPhase.SCAN)
+        assert r.state == IndexState.PENDING
         assert r.phase == IndexPhase.SCAN
         assert r.counts.scanned == 0
 
     def test_scanned_file_defaults(self):
         from fcode.contracts import ScannedFile, FileType
-        f = ScannedFile(file_path="test.py", file_type=FileType.PYTHON, size_bytes=100)
+        f = ScannedFile(file_path="test.py", file_type=FileType.SOURCE, size_bytes=100)
         assert not f.is_binary

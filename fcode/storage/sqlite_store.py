@@ -352,9 +352,16 @@ class SQLiteStore:
             chunks=d.get("total_chunks", 0) or 0,
             embedded=d.get("total_vectors", 0) or 0,
         )
+        raw_status = d.get("status", "pending")
+        try:
+            state = IndexState(raw_status)
+        except ValueError:
+            state = IndexState.PENDING
         return IndexStatusRecord(
-            state=IndexState.RUNNING if d.get("status") == "pending" else IndexState.IDLE,
+            state=state,
             counts=counts,
+            total_vectors=d.get("total_vectors", 0) or 0,
+            error_count=d.get("error_count", 0) or 0,
         )
 
     def store_file_records(self, records: list[dict]) -> None:

@@ -14,7 +14,7 @@ DDL_STATEMENTS = [
     # files
     """CREATE TABLE IF NOT EXISTS files (
         id TEXT PRIMARY KEY,
-        repo_id TEXT NOT NULL REFERENCES repositories(id),
+        repo_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
         path TEXT NOT NULL,
         absolute_path TEXT NOT NULL,
         language TEXT,

@@ -48,7 +48,7 @@ class TestChromaBasic:
             metadata=EmbeddingMetadata(
                 source_file="test.py",
                 chunk_id="test-1",
-                chunk_type=ChunkType.CODE,
+                chunk_type=ChunkType.FILE_SUMMARY,
                 start_line=1,
                 end_line=10,
             ),
@@ -62,7 +62,7 @@ class TestChromaBasic:
             vector=[0.1] * 384,
             metadata=EmbeddingMetadata(
                 source_file="a.py", chunk_id="dup-1",
-                chunk_type=ChunkType.CODE, start_line=1, end_line=5,
+                chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
         rec2 = EmbeddingRecord(
@@ -70,7 +70,7 @@ class TestChromaBasic:
             vector=[0.2] * 384,
             metadata=EmbeddingMetadata(
                 source_file="b.py", chunk_id="dup-1",
-                chunk_type=ChunkType.CODE, start_line=1, end_line=5,
+                chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
         store.upsert_embeddings("repo-1", [rec1])
@@ -85,7 +85,7 @@ class TestRepositoryIsolation:
             vector=[0.1] * 384,
             metadata=EmbeddingMetadata(
                 source_file="a.py", chunk_id="r1-1",
-                chunk_type=ChunkType.CODE, start_line=1, end_line=5,
+                chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
         rec2 = EmbeddingRecord(
@@ -93,7 +93,7 @@ class TestRepositoryIsolation:
             vector=[0.2] * 384,
             metadata=EmbeddingMetadata(
                 source_file="b.py", chunk_id="r2-1",
-                chunk_type=ChunkType.CODE, start_line=1, end_line=5,
+                chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
         store.upsert_embeddings("repo-a", [rec1])
@@ -107,7 +107,7 @@ class TestRepositoryIsolation:
             vector=[0.1] * 384,
             metadata=EmbeddingMetadata(
                 source_file="a.py", chunk_id="del-1",
-                chunk_type=ChunkType.CODE, start_line=1, end_line=5,
+                chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
         rec2 = EmbeddingRecord(
@@ -115,7 +115,7 @@ class TestRepositoryIsolation:
             vector=[0.2] * 384,
             metadata=EmbeddingMetadata(
                 source_file="b.py", chunk_id="del-2",
-                chunk_type=ChunkType.CODE, start_line=1, end_line=5,
+                chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
         store.upsert_embeddings("repo-x", [rec1])
@@ -132,7 +132,7 @@ class TestVectorValidation:
             vector=[0.5] * 384,
             metadata=EmbeddingMetadata(
                 source_file="d.py", chunk_id="dim-ok",
-                chunk_type=ChunkType.CODE, start_line=1, end_line=5,
+                chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
         store.upsert_embeddings("repo-d", [rec])
@@ -144,7 +144,7 @@ class TestVectorValidation:
             vector=[0.5] * 100,
             metadata=EmbeddingMetadata(
                 source_file="d.py", chunk_id="dim-bad",
-                chunk_type=ChunkType.CODE, start_line=1, end_line=5,
+                chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
         with pytest.raises(ValueError, match="384"):
@@ -158,7 +158,7 @@ class TestMetadata:
             vector=[0.1] * 384,
             metadata=EmbeddingMetadata(
                 source_file="n.py", chunk_id="no-sym",
-                chunk_type=ChunkType.CODE, start_line=1, end_line=5,
+                chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
         store.upsert_embeddings("repo-n", [rec])
@@ -171,7 +171,7 @@ class TestMetadata:
             vector=[0.1] * 384,
             metadata=EmbeddingMetadata(
                 source_file="l.py", chunk_id="no-lang",
-                chunk_type=ChunkType.CODE, start_line=1, end_line=5,
+                chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
         store.upsert_embeddings("repo-l", [rec])
@@ -184,7 +184,7 @@ class TestMetadata:
             vector=[0.1] * 384,
             metadata=EmbeddingMetadata(
                 source_file="nn.py", chunk_id="no-null",
-                chunk_type=ChunkType.CODE, start_line=1, end_line=5,
+                chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
         store.upsert_embeddings("repo-nn", [rec])
@@ -206,7 +206,7 @@ class TestPersistence:
             vector=[0.3] * 384,
             metadata=EmbeddingMetadata(
                 source_file="p.py", chunk_id="persist-1",
-                chunk_type=ChunkType.CODE, start_line=1, end_line=5,
+                chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
         s1.upsert_embeddings("repo-p", [rec])
