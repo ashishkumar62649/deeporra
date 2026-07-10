@@ -433,3 +433,38 @@ class TestSecretSafety:
         d = SkippedFileDiagnostic(file_path="secret.py", reason="file_skipped",
                                   details="Secret detected")
         assert "sk_test" not in d.details
+
+    def test_real_scan_hides_secret_from_serialized_scannedfile(self):
+        import tempfile, json, dataclasses
+        from fcode.scanner.file_scanner import scan
+        from fcode.contracts import FCodeConfig, RepoInput
+        original_secret = "sk_test_ABCdef789GHIJklmnop1234"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "secret.py")
+            with open(path, "w") as f:
+                f.write(f'API_KEY = "{original_secret}"\nprint("ok")\n')
+            result = scan(RepoInput(repo_path=tmp), FCodeConfig(repo_path=tmp))
+            secret_files = [sf for sf in result.files if sf.has_secrets]
+            assert len(secret_files) >= 1
+            sf = secret_files[0]
+            assert original_secret not in sf.safe_content
+            assert "[REDACTED]" in sf.safe_content
+            assert original_secret not in repr(sf)
+            serialized = json.dumps(dataclasses.asdict(sf), sort_keys=True, default=str)
+            assert original_secret not in serialized
+            assert "[REDACTED]" in serialized
+
+    def test_real_scan_hides_secret_from_serialized_scanresult(self):
+        import tempfile, json, dataclasses
+        from fcode.scanner.file_scanner import scan
+        from fcode.contracts import FCodeConfig, RepoInput
+        original_secret = "ghp_ABCdef789GHIJklmnop1234XYZabc"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "token.py")
+            with open(path, "w") as f:
+                f.write(f'TOKEN = "{original_secret}"\n')
+            result = scan(RepoInput(repo_path=tmp), FCodeConfig(repo_path=tmp))
+            assert result.warning_count >= 1
+            serialized = json.dumps(dataclasses.asdict(result), sort_keys=True, default=str)
+            assert original_secret not in serialized
+            assert "[REDACTED]" in serialized

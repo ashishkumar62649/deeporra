@@ -18,7 +18,7 @@ def extract_routes(tree: ast.AST, file_path: str) -> Generator[tuple[ParsedRoute
                 method, route_path = result
                 deco_line = getattr(deco, "lineno", node.lineno)
                 end_lineno = getattr(node, "end_lineno", node.lineno) or node.lineno
-                route_id = f"route:{method.value}:{route_path}:{file_path}:{node.lineno}"
+                route_id = f"route:{method.value}:{route_path}:{file_path}:{deco_line}"
 
                 route = ParsedRoute(
                     route_id=route_id,

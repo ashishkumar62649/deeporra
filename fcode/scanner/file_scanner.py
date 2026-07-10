@@ -78,7 +78,7 @@ def scan_repository(repo: RepoInput, config: FCodeConfig) -> ScanResult:
             skipped_diag, size = _skip_file_if_unsuitable(full_path, rel_path)
             if skipped_diag:
                 skipped.append(skipped_diag)
-                if skipped_diag.reason == "file_skipped" and skipped_diag.details.startswith("File too large"):
+                if skipped_diag.severity == DiagnosticSeverity.WARNING and skipped_diag.reason == "file_skipped":
                     warning_count += 1
                     warnings.append({
                         "file_path": rel_path,
@@ -224,6 +224,14 @@ def _is_dir_ignored(dir_path: str, rules: IgnoreRules, rel_dir: str) -> bool:
 
 
 def _skip_file_if_unsuitable(path: str, rel_path: str) -> tuple[SkippedFileDiagnostic | None, int]:
+    if os.path.islink(path):
+        return SkippedFileDiagnostic(
+            file_path=rel_path,
+            reason="file_skipped",
+            details="Symlinked file",
+            severity=DiagnosticSeverity.WARNING,
+        ), 0
+
     try:
         size = os.path.getsize(path)
     except OSError:

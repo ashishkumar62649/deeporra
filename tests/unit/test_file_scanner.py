@@ -229,3 +229,37 @@ def test_warning_count_on_secret():
         cfg = _config(tmp)
         result = scan(repo, cfg)
         assert result.warning_count >= 1
+
+
+def test_symlinked_file_skipped_without_opening(monkeypatch):
+    import builtins
+    tmp = tempfile.mkdtemp()
+    try:
+        normal = os.path.join(tmp, "real.py")
+        with open(normal, "w") as f:
+            f.write("x = 1\n")
+        link_path = os.path.join(tmp, "link.py")
+        with open(link_path, "w") as f:
+            f.write("x = 1\n")
+        monkeypatch.setattr(os.path, "islink", lambda p: p == link_path)
+        calls = []
+        original_open = builtins.open
+        def no_open(*args, **kwargs):
+            calls.append(args)
+            return original_open(*args, **kwargs)
+        monkeypatch.setattr(builtins, "open", no_open)
+        repo = _repo(tmp)
+        cfg = _config(tmp)
+        result = scan(repo, cfg)
+        link_files = [sf for sf in result.files if "link.py" in sf.file_path]
+        assert len(link_files) == 0
+        skipped_paths = [d.file_path for d in result.skipped if "link.py" in d.file_path]
+        assert len(skipped_paths) >= 1
+        symlink_diags = [d for d in result.skipped if "link.py" in d.file_path]
+        assert all(d.reason == "file_skipped" for d in symlink_diags)
+        link_open_calls = [c for c in calls if "link.py" in str(c[0])]
+        assert len(link_open_calls) == 0
+        assert result.warning_count >= 1
+    finally:
+        import shutil
+        shutil.rmtree(tmp, ignore_errors=True)

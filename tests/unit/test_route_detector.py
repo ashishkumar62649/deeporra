@@ -99,7 +99,25 @@ def list_users():
     results = _routes(code)
     route, sym = results[0]
     assert "route:GET:" in route.route_id
-    assert route.route_id.endswith(":routes.py:3")
+    assert route.route_id.endswith(":routes.py:2")
+    assert route.route_id.endswith(f":{route.start_line}")
+
+
+def test_route_id_uses_decorator_line():
+    code = """
+@app.get("/a")
+def a():
+    pass
+
+@app.post("/b")
+def b():
+    pass
+"""
+    results = _routes(code)
+    assert len(results) == 2
+    for route, sym in results:
+        assert route.route_id.endswith(f":{route.start_line}")
+        assert sym.start_line == route.start_line
 
 
 def test_start_line_is_decorator_line():
