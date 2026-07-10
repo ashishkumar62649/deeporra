@@ -73,49 +73,49 @@ class TestLoadConfig:
         path = Path(tmp_path) / CONFIG_FILE_NAME
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("not json", encoding="utf-8")
-        with pytest.raises(ValueError, match="malformed JSON"):
+        with pytest.raises(ValueError, match=r"config_invalid:.*malformed JSON"):
             load_config(str(tmp_path))
 
     def test_unknown_fields_fail(self, tmp_path: Path):
         data = _fresh_config()
         data["unknown_field"] = "value"
         _write_config(str(tmp_path), data)
-        with pytest.raises(ValueError, match="unknown fields"):
+        with pytest.raises(ValueError, match=r"config_invalid:.*unknown field"):
             load_config(str(tmp_path))
 
     def test_unsupported_schema_version_fails(self, tmp_path: Path):
         data = _fresh_config()
         data["schema_version"] = 99
         _write_config(str(tmp_path), data)
-        with pytest.raises(ValueError, match="unsupported schema version"):
+        with pytest.raises(ValueError, match=r"config_invalid:.*unsupported schema version"):
             load_config(str(tmp_path))
 
     def test_alternate_model_fails(self, tmp_path: Path):
         data = _fresh_config()
         data["embedding"]["model_name"] = "other-model"
         _write_config(str(tmp_path), data)
-        with pytest.raises(ValueError, match="locked value"):
+        with pytest.raises(ValueError, match=r"config_invalid:.*locked value"):
             load_config(str(tmp_path))
 
     def test_alternate_dimension_fails(self, tmp_path: Path):
         data = _fresh_config()
         data["embedding"]["dimension"] = 768
         _write_config(str(tmp_path), data)
-        with pytest.raises(ValueError, match="locked value"):
+        with pytest.raises(ValueError, match=r"config_invalid:.*locked value"):
             load_config(str(tmp_path))
 
     def test_alternate_embedding_provider_fails(self, tmp_path: Path):
         data = _fresh_config()
         data["embedding"]["provider"] = "openai"
         _write_config(str(tmp_path), data)
-        with pytest.raises(ValueError, match="locked value"):
+        with pytest.raises(ValueError, match=r"config_invalid:.*locked value"):
             load_config(str(tmp_path))
 
     def test_alternate_full_rebuild_fails(self, tmp_path: Path):
         data = _fresh_config()
         data["indexing"]["full_rebuild"] = False
         _write_config(str(tmp_path), data)
-        with pytest.raises(ValueError, match="locked value"):
+        with pytest.raises(ValueError, match=r"config_invalid:.*locked value"):
             load_config(str(tmp_path))
 
     def test_nonexistent_config_raises(self, tmp_path: Path):

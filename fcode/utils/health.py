@@ -3,8 +3,10 @@
 import sys
 from pathlib import Path
 
-from fcode.contracts import DiagnosticSeverity, DoctorCheck, DoctorCheck as DC
+from fcode.contracts import DiagnosticSeverity, DoctorCheck
 from fcode.contracts import DoctorResult
+
+_WP1_IMPORTS = ["typer", "pydantic"]
 
 
 def check_python_version() -> DoctorCheck:
@@ -19,21 +21,25 @@ def check_python_version() -> DoctorCheck:
 
 
 def check_required_imports() -> DoctorCheck:
-    try:
-        import typer
-        return DoctorCheck(
-            name="required_imports",
-            passed=True,
-            message="typer available",
-            severity=DiagnosticSeverity.WARNING,
-        )
-    except ImportError as e:
+    missing = []
+    for mod in _WP1_IMPORTS:
+        try:
+            __import__(mod)
+        except ImportError:
+            missing.append(mod)
+    if missing:
         return DoctorCheck(
             name="required_imports",
             passed=False,
-            message=str(e),
+            message=f"missing: {', '.join(missing)}",
             severity=DiagnosticSeverity.ERROR,
         )
+    return DoctorCheck(
+        name="required_imports",
+        passed=True,
+        message=f"all available ({', '.join(_WP1_IMPORTS)})",
+        severity=DiagnosticSeverity.WARNING,
+    )
 
 
 def check_directory(repo_path: str = ".") -> DoctorCheck:
