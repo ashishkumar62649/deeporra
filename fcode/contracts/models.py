@@ -211,6 +211,8 @@ class IndexStatusRecord:
     phase: Optional[IndexPhase] = None
     completed_phase: Optional[IndexPhase] = None
     counts: IndexCounts = field(default_factory=IndexCounts)
+    total_vectors: int = 0
+    error_count: int = 0
     errors: list[str] = field(default_factory=list)
     message: Optional[str] = None
 
@@ -246,7 +248,7 @@ class EvidenceItem:
     content: str
     chunk_id: str
     score: float = 0.0
-    chunk_type: ChunkType = ChunkType.CODE
+    chunk_type: ChunkType = ChunkType.FILE_SUMMARY
 
 
 @dataclass

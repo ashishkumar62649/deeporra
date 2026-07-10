@@ -13,52 +13,56 @@ class IndexPhase(str, Enum):
 
 
 class IndexState(str, Enum):
-    IDLE = "idle"
-    RUNNING = "running"
-    PASSED = "passed"
-    FAILED = "failed"
-    PARTIAL = "partial"
+    PENDING = "pending"
+    SCANNING = "scanning"
+    PARSING = "parsing"
+    CHUNKING = "chunking"
+    EMBEDDING = "embedding"
+    GRAPHING = "graphing"
+    STORING = "storing"
+    COMPLETE = "complete"
+    ERROR = "error"
 
 
 class ParseStatus(str, Enum):
     PENDING = "pending"
     PARSED = "parsed"
-    FAILED = "failed"
-    SKIPPED = "skipped"
+    ERROR = "error"
+    NOT_APPLICABLE = "not_applicable"
 
 
 class FileType(str, Enum):
-    PYTHON = "python"
-    JUPYTER = "jupyter"
-    MARKDOWN = "markdown"
-    YAML = "yaml"
-    TOML = "toml"
-    JSON = "json"
+    SOURCE = "source"
+    TEST = "test"
     CONFIG = "config"
-    UNKNOWN = "unknown"
+    DOC = "doc"
 
 
 class SymbolType(str, Enum):
-    CLASS = "class"
     FUNCTION = "function"
+    CLASS = "class"
     METHOD = "method"
-    PROPERTY = "property"
+    ROUTE = "route"
     VARIABLE = "variable"
-    IMPORT = "import"
 
 
 class GraphNodeType(str, Enum):
     FILE = "file"
-    SYMBOL = "symbol"
-    CHUNK = "chunk"
+    FUNCTION = "function"
+    CLASS = "class"
+    METHOD = "method"
+    ROUTE = "route"
+    IMPORT = "import"
+    TEST = "test"
 
 
 class GraphRelation(str, Enum):
-    CONTAINS = "contains"
-    IMPORTS = "imports"
-    CALLS = "calls"
-    INHERITS = "inherits"
     DEFINES = "defines"
+    IMPORTS = "imports"
+    INHERITS = "inherits"
+    CALLS = "calls"
+    TESTS = "tests"
+    HANDLES_ROUTE = "handles_route"
 
 
 class HttpMethod(str, Enum):
@@ -70,23 +74,25 @@ class HttpMethod(str, Enum):
 
 
 class Confidence(str, Enum):
-    EXTRACTED = "extracted"
-    INFERRED = "inferred"
-    AMBIGUOUS = "ambiguous"
+    EXTRACTED = "EXTRACTED"
+    INFERRED = "INFERRED"
+    AMBIGUOUS = "AMBIGUOUS"
 
 
 class ChunkType(str, Enum):
-    CODE = "code"
-    DOCSTRING = "docstring"
-    COMMENT = "comment"
-    MARKDOWN = "markdown"
+    FILE_SUMMARY = "file_summary"
+    FUNCTION = "function"
+    CLASS = "class"
+    METHOD = "method"
+    ROUTE = "route"
+    TEST = "test"
+    CONFIG = "config"
+    README_SECTION = "readme_section"
 
 
 class SearchMode(str, Enum):
-    EXACT = "exact"
-    KEYWORD = "keyword"
-    VECTOR = "vector"
-    HYBRID = "hybrid"
+    FTS5 = "fts5"
+    LIKE_FALLBACK = "like_fallback"
 
 
 class DiagnosticSeverity(str, Enum):
