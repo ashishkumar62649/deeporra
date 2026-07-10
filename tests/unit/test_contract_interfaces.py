@@ -56,3 +56,35 @@ class TestProtocolsStructure:
     def test_status_service_methods(self):
         assert hasattr(StatusServiceProtocol, "get_status")
         assert hasattr(StatusServiceProtocol, "doctor")
+
+
+class TestConcreteSignatureMatch:
+    """Concrete implementations must match their Protocol signatures."""
+
+    def test_graph_store_store_graph_signature(self):
+        import inspect
+        from fcode.storage.graph_store import GraphStore
+        proto_sig = inspect.signature(GraphStoreProtocol.store_graph)
+        impl_sig = inspect.signature(GraphStore.store_graph)
+        assert list(proto_sig.parameters.keys()) == list(impl_sig.parameters.keys())
+
+    def test_graph_store_reset_signature(self):
+        import inspect
+        from fcode.storage.graph_store import GraphStore
+        proto_sig = inspect.signature(GraphStoreProtocol.reset)
+        impl_sig = inspect.signature(GraphStore.reset)
+        assert list(proto_sig.parameters.keys()) == list(impl_sig.parameters.keys())
+
+    def test_fts_store_rebuild_signature(self):
+        import inspect
+        from fcode.storage.fts_store import FTSStore
+        proto_sig = inspect.signature(FTSStoreProtocol.rebuild)
+        impl_sig = inspect.signature(FTSStore.rebuild)
+        assert list(proto_sig.parameters.keys()) == list(impl_sig.parameters.keys())
+
+    def test_fts_store_reset_signature(self):
+        import inspect
+        from fcode.storage.fts_store import FTSStore
+        proto_sig = inspect.signature(FTSStoreProtocol.reset)
+        impl_sig = inspect.signature(FTSStore.reset)
+        assert list(proto_sig.parameters.keys()) == list(impl_sig.parameters.keys())

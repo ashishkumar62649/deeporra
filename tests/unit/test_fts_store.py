@@ -30,6 +30,214 @@ def fts_available(db):
     return FTSStore.check_availability(store.conn)
 
 
+class TestFTSStoreProtocol:
+    """Public Protocol-surface tests — rebuild() and reset()."""
+
+    def test_rebuild_requires_conn(self, db):
+        fts = FTSStore()
+        with pytest.raises(RuntimeError, match="not connected"):
+            fts.rebuild([])
+
+    def test_reset_requires_conn(self, db):
+        fts = FTSStore()
+        with pytest.raises(RuntimeError, match="not connected"):
+            fts.reset()
+
+    def test_rebuild_creates_fts_tables(self, db, fts_available):
+        if not fts_available:
+            pytest.skip("FTS5 not available")
+        store, repo_id = db
+        fts = FTSStore(conn=store.conn)
+        fts.rebuild([])
+        tables = {
+            r["name"]
+            for r in store.conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        assert "chunks_fts" in tables
+        assert "symbols_fts" in tables
+
+    def test_rebuild_populates_chunk_fts(self, db, fts_available):
+        if not fts_available:
+            pytest.skip("FTS5 not available")
+        store, repo_id = db
+        fid = str(uuid_mod.uuid4())
+        store.conn.execute(
+            "INSERT INTO files (id, repo_id, path, absolute_path, file_type, parse_status) VALUES (?, ?, 'c.py', '/tmp/c.py', 'source', 'pending')",
+            (fid, repo_id),
+        )
+        cid = str(uuid_mod.uuid4())
+        store.conn.execute(
+            "INSERT INTO chunks (id, repo_id, file_id, chunk_type, content, file_path) VALUES (?, ?, ?, 'function', 'def foo(): return 42', 'c.py')",
+            (cid, repo_id, fid),
+        )
+        store.conn.commit()
+        fts = FTSStore(conn=store.conn)
+        fts.rebuild([])
+        assert fts.count_chunks_fts(store.conn) == 1
+
+    def test_rebuild_populates_symbol_fts(self, db, fts_available):
+        if not fts_available:
+            pytest.skip("FTS5 not available")
+        store, repo_id = db
+        fid = str(uuid_mod.uuid4())
+        store.conn.execute(
+            "INSERT INTO files (id, repo_id, path, absolute_path, file_type, parse_status) VALUES (?, ?, 's.py', '/tmp/s.py', 'source', 'pending')",
+            (fid, repo_id),
+        )
+        sid = str(uuid_mod.uuid4())
+        store.conn.execute(
+            "INSERT INTO symbols (id, repo_id, file_id, symbol_type, name) VALUES (?, ?, ?, 'function', 'my_func')",
+            (sid, repo_id, fid),
+        )
+        store.conn.commit()
+        fts = FTSStore(conn=store.conn)
+        fts.rebuild([])
+        assert fts.count_symbols_fts(store.conn) == 1
+
+    def test_rebuild_maps_public_uuid(self, db, fts_available):
+        if not fts_available:
+            pytest.skip("FTS5 not available")
+        store, repo_id = db
+        fid = str(uuid_mod.uuid4())
+        store.conn.execute(
+            "INSERT INTO files (id, repo_id, path, absolute_path, file_type, parse_status) VALUES (?, ?, 'm.py', '/tmp/m.py', 'source', 'pending')",
+            (fid, repo_id),
+        )
+        cid = str(uuid_mod.uuid4())
+        store.conn.execute(
+            "INSERT INTO chunks (id, repo_id, file_id, chunk_type, content, file_path) VALUES (?, ?, ?, 'function', 'def reachable(): pass', 'm.py')",
+            (cid, repo_id, fid),
+        )
+        store.conn.commit()
+        fts = FTSStore(conn=store.conn)
+        fts.rebuild([])
+        results = fts.search_chunks_fts_only(store.conn, "reachable", repo_id, 10)
+        uuids = [r["id"] for r in results]
+        assert cid in uuids
+
+    def test_content_replacement_rebuild_removes_stale(self, db, fts_available):
+        if not fts_available:
+            pytest.skip("FTS5 not available")
+        store, repo_id = db
+        fid = str(uuid_mod.uuid4())
+        store.conn.execute(
+            "INSERT INTO files (id, repo_id, path, absolute_path, file_type, parse_status) VALUES (?, ?, 'r.py', '/tmp/r.py', 'source', 'pending')",
+            (fid, repo_id),
+        )
+        cid = str(uuid_mod.uuid4())
+        store.conn.execute(
+            "INSERT INTO chunks (id, repo_id, file_id, chunk_type, content, file_path) VALUES (?, ?, ?, 'function', 'stale content', 'r.py')",
+            (cid, repo_id, fid),
+        )
+        store.conn.commit()
+        fts = FTSStore(conn=store.conn)
+        fts.rebuild([])
+        assert fts.count_chunks_fts(store.conn) == 1
+        store.conn.execute("DELETE FROM chunks WHERE repo_id = ?", (repo_id,))
+        store.conn.commit()
+        fts.rebuild([])
+        assert fts.count_chunks_fts(store.conn) == 0
+
+    def test_reset_drops_fts_tables(self, db, fts_available):
+        if not fts_available:
+            pytest.skip("FTS5 not available")
+        store, repo_id = db
+        fts = FTSStore(conn=store.conn)
+        fts.rebuild([])
+        assert "chunks_fts" in {
+            r["name"]
+            for r in store.conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        fts.reset()
+        tables = {
+            r["name"]
+            for r in store.conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        assert "chunks_fts" not in tables
+        assert "symbols_fts" not in tables
+
+    def test_reset_does_not_delete_content_tables(self, db, fts_available):
+        if not fts_available:
+            pytest.skip("FTS5 not available")
+        store, repo_id = db
+        fid = str(uuid_mod.uuid4())
+        store.conn.execute(
+            "INSERT INTO files (id, repo_id, path, absolute_path, file_type, parse_status) VALUES (?, ?, 'k.py', '/tmp/k.py', 'source', 'pending')",
+            (fid, repo_id),
+        )
+        cid = str(uuid_mod.uuid4())
+        store.conn.execute(
+            "INSERT INTO chunks (id, repo_id, file_id, chunk_type, content, file_path) VALUES (?, ?, ?, 'function', 'keep me', 'k.py')",
+            (cid, repo_id, fid),
+        )
+        store.conn.commit()
+        fts = FTSStore(conn=store.conn)
+        fts.rebuild([])
+        fts.reset()
+        row = store.conn.execute("SELECT id FROM chunks WHERE id = ?", (cid,)).fetchone()
+        assert row is not None
+
+    def test_rebuild_after_reset_works(self, db, fts_available):
+        if not fts_available:
+            pytest.skip("FTS5 not available")
+        store, repo_id = db
+        fid = str(uuid_mod.uuid4())
+        store.conn.execute(
+            "INSERT INTO files (id, repo_id, path, absolute_path, file_type, parse_status) VALUES (?, ?, 'w.py', '/tmp/w.py', 'source', 'pending')",
+            (fid, repo_id),
+        )
+        cid = str(uuid_mod.uuid4())
+        store.conn.execute(
+            "INSERT INTO chunks (id, repo_id, file_id, chunk_type, content, file_path) VALUES (?, ?, ?, 'function', 'rebuild after reset', 'w.py')",
+            (cid, repo_id, fid),
+        )
+        store.conn.commit()
+        fts = FTSStore(conn=store.conn)
+        fts.rebuild([])
+        fts.reset()
+        fts.rebuild([])
+        assert fts.count_chunks_fts(store.conn) == 1
+
+    def test_rebuild_not_noop(self, db, fts_available):
+        if not fts_available:
+            pytest.skip("FTS5 not available")
+        store, repo_id = db
+        fts = FTSStore(conn=store.conn)
+        before_count = len([
+            r for r in store.conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+            if r["name"] in ("chunks_fts", "symbols_fts")
+        ])
+        fts.rebuild([])
+        after_count = len([
+            r for r in store.conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+            if r["name"] in ("chunks_fts", "symbols_fts")
+        ])
+        assert after_count >= before_count
+
+    def test_protocol_conformance(self, db):
+        import inspect
+        from fcode.contracts.interfaces import FTSStoreProtocol
+        sig_rebuild = inspect.signature(FTSStoreProtocol.rebuild)
+        sig_reset = inspect.signature(FTSStoreProtocol.reset)
+        assert list(sig_rebuild.parameters.keys()) == ["self", "chunks"]
+        assert list(sig_reset.parameters.keys()) == ["self"]
+        assert callable(getattr(FTSStore, "rebuild"))
+        assert callable(getattr(FTSStore, "reset"))
+        fts = FTSStore()
+        assert callable(fts.rebuild)
+        assert callable(fts.reset)
+
+
 class TestFTSAvailability:
     def test_avail_detection_no_fatal(self, db):
         store, _ = db
@@ -243,3 +451,27 @@ class TestFTSUnavailable:
         store, _ = db
         avail = FTSStore.check_availability(store.conn)
         assert isinstance(avail, bool)
+
+    def test_rebuild_does_not_raise_when_fts_unavailable(self, db):
+        store, _ = db
+        if not FTSStore.check_availability(store.conn):
+            store2, _ = db
+            fts = FTSStore(conn=store2.conn)
+            try:
+                fts.rebuild([])
+            except Exception as e:
+                pytest.fail(f"rebuild raised {e} when FTS unavailable")
+
+    def test_rebuild_creates_no_tables_when_fts_unavailable(self, db):
+        store, _ = db
+        if not FTSStore.check_availability(store.conn):
+            fts = FTSStore(conn=store.conn)
+            fts.rebuild([])
+            tables = {
+                r["name"]
+                for r in store.conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }
+            assert "chunks_fts" not in tables
+            assert "symbols_fts" not in tables

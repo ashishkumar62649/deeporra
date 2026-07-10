@@ -17,11 +17,28 @@ class GraphStore:
     Uses a caller-provided SQLite connection. Never opens its own transaction.
     """
 
+    def __init__(self, conn: Optional[sqlite3.Connection] = None):
+        self._conn = conn
+
     def store_graph(self, nodes: list[dict], edges: list[dict]) -> None:
-        pass
+        conn = self._require_conn()
+        repo_id = ""
+        if nodes:
+            repo_id = nodes[0].get("repo_id", "")
+            self.insert_nodes(conn, repo_id, nodes)
+        if edges:
+            repo_id = edges[0].get("repo_id", "") or repo_id
+            self.insert_edges(conn, repo_id, edges)
 
     def reset(self) -> None:
-        pass
+        conn = self._require_conn()
+        conn.execute("DELETE FROM code_nodes")
+        conn.execute("DELETE FROM code_edges")
+
+    def _require_conn(self) -> sqlite3.Connection:
+        if self._conn is None:
+            raise RuntimeError("GraphStore not connected. Set ._conn or pass conn to __init__.")
+        return self._conn
 
     # ── Node operations ─────────────────────────────────────────────────────
 

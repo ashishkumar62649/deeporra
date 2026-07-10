@@ -219,8 +219,8 @@ If the embedding model changes, all vectors must be regenerated.
 | total_chunks | INTEGER DEFAULT 0 | Chunks created |
 | total_graph_nodes | INTEGER DEFAULT 0 | Graph nodes created |
 | total_edges | INTEGER DEFAULT 0 | Graph edges extracted |
-| total_vectors | INTEGER DEFAULT 0 | Vectors stored in Chroma |
-| error_count | INTEGER DEFAULT 0 | Fatal errors during indexing |
+| total_vectors | INTEGER NOT NULL DEFAULT 0 | Vectors stored in Chroma |
+| error_count | INTEGER NOT NULL DEFAULT 0 | Fatal errors during indexing |
 | warning_count | INTEGER DEFAULT 0 | Warnings during indexing (parse warnings, embedding failures, skipped files) |
 | embedding_model | TEXT | Model used (e.g. `sentence-transformers/all-MiniLM-L6-v2`) |
 | active_search_mode | TEXT | One of: `fts5`, `like_fallback`. Set after FTS creation attempt. |
@@ -328,8 +328,8 @@ CREATE TABLE index_status (
     total_chunks INTEGER DEFAULT 0,
     total_graph_nodes INTEGER DEFAULT 0,
     total_edges INTEGER DEFAULT 0,
-    total_vectors INTEGER DEFAULT 0,
-    error_count INTEGER DEFAULT 0,
+    total_vectors INTEGER NOT NULL DEFAULT 0,
+    error_count INTEGER NOT NULL DEFAULT 0,
     warning_count INTEGER DEFAULT 0,
     embedding_model TEXT,
     active_search_mode TEXT CHECK(active_search_mode IN ('fts5', 'like_fallback')),

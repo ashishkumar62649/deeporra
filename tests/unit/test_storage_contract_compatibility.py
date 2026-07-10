@@ -445,6 +445,103 @@ class TestIndexStatusColumns:
         assert row["error_count"] == 7
 
 
+class TestIndexStatusNotNull:
+    def test_total_vectors_not_null(self, db):
+        conn, repo_id = db
+        col_info = conn.execute("PRAGMA table_info(index_status)").fetchall()
+        col = {r["name"]: r for r in col_info}
+        assert col["total_vectors"]["notnull"] == 1
+
+    def test_total_vectors_default(self, db):
+        conn, repo_id = db
+        col_info = conn.execute("PRAGMA table_info(index_status)").fetchall()
+        col = {r["name"]: r for r in col_info}
+        dflt = col["total_vectors"]["dflt_value"]
+        assert dflt == "0" or dflt == 0
+
+    def test_error_count_not_null(self, db):
+        conn, repo_id = db
+        col_info = conn.execute("PRAGMA table_info(index_status)").fetchall()
+        col = {r["name"]: r for r in col_info}
+        assert col["error_count"]["notnull"] == 1
+
+    def test_error_count_default(self, db):
+        conn, repo_id = db
+        col_info = conn.execute("PRAGMA table_info(index_status)").fetchall()
+        col = {r["name"]: r for r in col_info}
+        dflt = col["error_count"]["dflt_value"]
+        assert dflt == "0" or dflt == 0
+
+    def test_omitted_values_default_to_zero(self, db):
+        conn, repo_id = db
+        row = conn.execute(
+            "SELECT total_vectors, error_count FROM index_status WHERE repo_id = ?",
+            (repo_id,),
+        ).fetchone()
+        assert row["total_vectors"] == 0
+        assert row["error_count"] == 0
+
+    def test_explicit_null_total_vectors_rejected(self, db):
+        conn, repo_id = db
+        new_id = str(uuid_mod.uuid4())
+        conn.execute(
+            "INSERT INTO repositories (id, path) VALUES (?, ?)",
+            (new_id, "/tmp/null_reject"),
+        )
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO index_status (repo_id, total_vectors) VALUES (?, ?)",
+                (new_id, None),
+            )
+        conn.execute("DELETE FROM repositories WHERE id = ?", (new_id,))
+        conn.commit()
+
+    def test_explicit_null_error_count_rejected(self, db):
+        conn, repo_id = db
+        new_id = str(uuid_mod.uuid4())
+        conn.execute(
+            "INSERT INTO repositories (id, path) VALUES (?, ?)",
+            (new_id, "/tmp/null_reject2"),
+        )
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO index_status (repo_id, error_count) VALUES (?, ?)",
+                (new_id, None),
+            )
+        conn.execute("DELETE FROM repositories WHERE id = ?", (new_id,))
+        conn.commit()
+
+    def test_update_null_total_vectors_rejected(self, db):
+        conn, repo_id = db
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "UPDATE index_status SET total_vectors = NULL WHERE repo_id = ?",
+                (repo_id,),
+            )
+
+    def test_update_null_error_count_rejected(self, db):
+        conn, repo_id = db
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "UPDATE index_status SET error_count = NULL WHERE repo_id = ?",
+                (repo_id,),
+            )
+
+    def test_nonzero_values_persist(self, db):
+        conn, repo_id = db
+        conn.execute(
+            "UPDATE index_status SET total_vectors = 42, error_count = 7 WHERE repo_id = ?",
+            (repo_id,),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT total_vectors, error_count FROM index_status WHERE repo_id = ?",
+            (repo_id,),
+        ).fetchone()
+        assert row["total_vectors"] == 42
+        assert row["error_count"] == 7
+
+
 class TestNoValidEnumCausesCheckFailure:
     def test_all_nine_enums_safe(self, db):
         conn, repo_id = db

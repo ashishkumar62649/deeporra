@@ -30,11 +30,25 @@ class FTSStore:
     Does not open its own transaction.
     """
 
+    def __init__(self, conn: Optional[sqlite3.Connection] = None):
+        self._conn = conn
+
     def rebuild(self, chunks: list[CodeChunk]) -> None:
-        pass
+        conn = self._require_conn()
+        self.drop_tables(conn)
+        if not self.check_availability(conn):
+            return
+        self.create_tables(conn)
+        self.rebuild_all(conn)
 
     def reset(self) -> None:
-        pass
+        conn = self._require_conn()
+        self.drop_tables(conn)
+
+    def _require_conn(self) -> sqlite3.Connection:
+        if self._conn is None:
+            raise RuntimeError("FTSStore not connected. Set ._conn or pass conn to __init__.")
+        return self._conn
 
     # ── Availability detection ──────────────────────────────────────────────
 
