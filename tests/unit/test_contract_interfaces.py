@@ -108,3 +108,36 @@ class TestConcreteSignatureMatch:
         proto_params = list(inspect.signature(ChunkerProtocol.chunk).parameters.keys())
         impl_params = list(inspect.signature(Chunker.chunk).parameters.keys())
         assert proto_params == impl_params
+
+
+class TestEmbeddingEncoderAnnotation:
+    """Resolved annotation must be Sequence[EmbeddingInput], not list."""
+
+    def test_protocol_has_encode_method(self):
+        assert hasattr(EmbeddingEncoderProtocol, "encode")
+
+    def test_encoder_input_annotation_is_sequence(self):
+        import inspect
+        from typing import get_origin, get_args, get_type_hints
+        from collections.abc import Sequence
+        from fcode.embeddings.encoder import EmbeddingEncoder
+        from fcode.contracts.models import EmbeddingInput, EmbeddingBatchResult
+
+        proto_hints = get_type_hints(EmbeddingEncoderProtocol.encode)
+        conc_hints = get_type_hints(EmbeddingEncoder.encode)
+
+        params = list(inspect.signature(EmbeddingEncoderProtocol.encode).parameters.keys())
+        assert params[0] == "self"
+        assert params[1] == "inputs"
+
+        proto_input = proto_hints["inputs"]
+        assert get_origin(proto_input) is Sequence
+        assert get_args(proto_input) == (EmbeddingInput,)
+        assert proto_input is not list
+
+        conc_input = conc_hints["inputs"]
+        assert get_origin(conc_input) is Sequence
+        assert get_args(conc_input) == (EmbeddingInput,)
+
+        assert proto_hints["return"] is EmbeddingBatchResult
+        assert conc_hints["return"] is EmbeddingBatchResult
