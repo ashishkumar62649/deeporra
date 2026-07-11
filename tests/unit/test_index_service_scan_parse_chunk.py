@@ -58,6 +58,33 @@ class TestConstructor:
         with pytest.raises(TypeError):
             IndexService(scanner=MagicMock(), parser=MagicMock(), chunker=None)
 
+    def test_backward_compat_no_encoder_graph_builder(self):
+        svc = IndexService(scanner=MagicMock(), parser=MagicMock(), chunker=MagicMock())
+        assert svc._encoder is None
+        assert svc._graph_builder is None
+
+    def test_backward_compat_with_encoder(self):
+        svc = IndexService(
+            scanner=MagicMock(), parser=MagicMock(), chunker=MagicMock(),
+            encoder=MagicMock(),
+        )
+        assert svc._encoder is not None
+
+    def test_backward_compat_with_graph_builder(self):
+        svc = IndexService(
+            scanner=MagicMock(), parser=MagicMock(), chunker=MagicMock(),
+            graph_builder=MagicMock(),
+        )
+        assert svc._graph_builder is not None
+
+    def test_backward_compat_with_both(self):
+        svc = IndexService(
+            scanner=MagicMock(), parser=MagicMock(), chunker=MagicMock(),
+            encoder=MagicMock(), graph_builder=MagicMock(),
+        )
+        assert svc._encoder is not None
+        assert svc._graph_builder is not None
+
 
 # ── validate_config ──────────────────────────────────────────────────────────
 

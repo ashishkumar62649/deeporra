@@ -436,6 +436,15 @@ parser candidate selection with recoverable errors, chunker invocation, all vali
 result construction. Ends in CHUNKING state on success. No storage, embeddings, or graph work performed.
 See WP5 Step 2 report for full details.
 
+### WP5 Step 3 — Complete
+
+Step 3 extended the pipeline with `IndexService.build_through_graphing()` — embedding input construction,
+encoder invocation, embedding-result validation (type, counts, records, vectors, dimensions, paths),
+graph builder invocation, graph-result validation (type, nodes, edges, counts, paths, deps), and
+embedding/graph diagnostic classification. Fatal error handler `_build_fatal` extended with `chunks`
+and `embedding_result` kwargs. Backward-compatible constructor (keyword-only `encoder` and `graph_builder`
+parameters). `fcode/embeddings/__init__.py` exports `EXPECTED_DIMENSION`. 78 new unit tests. **835 total tests pass** (753 baseline + 4 backward-compat + 78 new). No storage, persistence, or CLI activation — Step 4 deferred.
+
 ### Remaining WP5 Steps
 
 **Agent Name:** Integration Agent

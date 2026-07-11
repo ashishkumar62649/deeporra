@@ -13,11 +13,12 @@ repo_path → scan → parse → chunk → embed → graph → store → .fcode/
 The indexing pipeline is governed by a pure state machine in `fcode/indexing/state_machine.py`.
 It performs no I/O and knows nothing about the repository path.
 
-**Current-build scope (WP5 Step 2):** The orchestrator (`IndexService.build_through_chunking`)
+**Current-build scope (WP5 Step 2 + Step 3):** Step 2 (`IndexService.build_through_chunking`)
 validates the repository path and config, calls the scanner once, iterates parser candidates
-with recoverable-error handling, and calls the chunker once. Results remain in memory.
-Embeddings, graph extraction, persistence, persistent replacement, `run_index`, status
-services, and CLI activation are deferred to later WP5 steps.
+with recoverable-error handling, and calls the chunker once. Step 3 (`IndexService.build_through_graphing`)
+extends the pipeline through embedding (input construction + encoder call) and graph extraction
+(graph builder call). Results remain in memory. Persistence, persistent replacement, `run_index`,
+status services, and CLI activation are deferred to later WP5 steps.
 
 ### State progression
 

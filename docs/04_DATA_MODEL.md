@@ -772,7 +772,7 @@ COMPLETE has no fatal diagnostics, ERROR has fatal diagnostics or error strings.
 
 ### IndexBuildResult
 
-Complete in-memory output of `IndexService.build_through_chunking()` (scan → parse → chunk).
+Complete in-memory output of `IndexService.build_through_chunking()` (scan → parse → chunk) or `build_through_graphing()` (scan → parse → chunk → embed → graph).
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
@@ -783,8 +783,8 @@ Complete in-memory output of `IndexService.build_through_chunking()` (scan → p
 | scan_result | Optional[ScanResult] | None | Raw output of the scanner step |
 | parsed_files | list[ParsedFile] | [] | Output of the parser step |
 | chunks | list[CodeChunk] | [] | Output of the chunker step |
-| embedding_result | Optional[EmbeddingBatchResult] | None | Filled in later WP5 steps |
-| graph_result | Optional[GraphBuildResult] | None | Filled in later WP5 steps |
+| embedding_result | Optional[EmbeddingBatchResult] | None | Filled in WP5 Step 3 |
+| graph_result | Optional[GraphBuildResult] | None | Filled in WP5 Step 3 |
 
 Field order is fixed. All fields directly accessible after the method returns.
 

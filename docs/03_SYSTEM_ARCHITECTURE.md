@@ -59,7 +59,7 @@ fcode CLI (Typer)
 
 The CLI is thin. It parses arguments and calls service modules. No business logic in CLI handlers.
 
-**Pipeline orchestration:** The `fcode/indexing/index_service.py` module owns pipeline orchestration. It controls status transitions, executes cleanup rules, maps fatal errors to the error catalog, and contains no parser/storage/chunking algorithms. The `IndexService.build_through_chunking()` method orchestrates config validation, scanner call, parser loop with recoverable error handling, and chunker call — producing an `IndexBuildResult` with in-memory scan, parse, and chunk data.
+**Pipeline orchestration:** The `fcode/indexing/index_service.py` module owns pipeline orchestration. It controls status transitions, executes cleanup rules, maps fatal errors to the error catalog, and contains no parser/storage/chunking algorithms. `IndexService.build_through_chunking()` orchestrates config validation, scanner call, parser loop with recoverable error handling, and chunker call — producing an `IndexBuildResult` with in-memory scan, parse, and chunk data. `IndexService.build_through_graphing()` extends the pipeline through embedding (input construction + encoder call) and graph extraction (graph builder call), producing an `IndexBuildResult` with in-memory scan, parse, chunk, embedding, and graph data.
 
 ## 5. Indexer Architecture
 
@@ -291,7 +291,7 @@ Return: ranked evidence with file paths, symbols, line ranges
 
 `fcode/indexing/` contains:
 - `state_machine.py` — a pure state controller that performs no I/O, imports no feature modules, and knows nothing about the repository path. It tracks indexing state, active phase, completed phase, history, and the Phase-C persistent-replacement flag.
-- `index_service.py` — the pipeline orchestrator (Step 2: scan→parse→chunk in memory, no storage/embeddings/graph).
+- `index_service.py` — the pipeline orchestrator (Step 2: scan→parse→chunk; Step 3: embedding+graph; Step 4: storage — deferred).
 
 `fcode/indexing/index_service.py` is owned by the Integration Agent. It is the only module that controls:
 - Phase order
@@ -391,7 +391,7 @@ fcode/
 ├── indexing/
 │   ├── __init__.py
 │   ├── state_machine.py    # pure state controller (no I/O)
-│   └── index_service.py    # pipeline orchestrator (Step 2: scan→parse→chunk in memory)
+│   └── index_service.py    # pipeline orchestrator (Step 2: scan→parse→chunk; Step 3: embedding+graph)
 ├── graph/
 │   ├── __init__.py
 │   ├── graph_builder.py    # extract nodes/edges from AST
