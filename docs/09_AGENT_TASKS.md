@@ -443,7 +443,11 @@ encoder invocation, embedding-result validation (type, counts, records, vectors,
 graph builder invocation, graph-result validation (type, nodes, edges, counts, paths, deps), and
 embedding/graph diagnostic classification. Fatal error handler `_build_fatal` extended with `chunks`
 and `embedding_result` kwargs. Backward-compatible constructor (keyword-only `encoder` and `graph_builder`
-parameters). `fcode/embeddings/__init__.py` exports `EXPECTED_DIMENSION`. 78 new unit tests. **835 total tests pass** (753 baseline + 4 backward-compat + 78 new). No storage, persistence, or CLI activation — Step 4 deferred.
+parameters). `fcode/embeddings/__init__.py` exports `EXPECTED_DIMENSION`. No storage, persistence, or CLI activation was added in Step 3.
+
+### WP5 Step 4 — Complete
+
+Step 4 added `IndexService.build_through_sqlite_fts()` with keyword-only injected SQLite and FTS dependencies. One fresh state machine runs scan through graph and then enters `STORING` before any write. On a fresh repository scope, repository/status metadata, files, parsed symbols and routes, chunks, and external-content FTS tables are written on the shared SQLite connection in one transaction. Success is intentionally nonterminal (`phase=PERSIST`, `completed_phase=GRAPH`, `persistent_replacement_started=True`). FTS queries resolve to canonical stored chunk evidence. Vector/Chroma writes, graph-store writes, coordinated replacement, old-index deletion, active promotion, `COMPLETE`, and CLI activation remain Step 5 work.
 
 ### Remaining WP5 Steps
 

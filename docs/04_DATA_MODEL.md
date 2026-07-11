@@ -473,6 +473,8 @@ During every full rebuild, after all content rows are inserted:
 
 FTS5 rebuild occurs after the SQLite content transaction commits, using the complete current content tables.
 
+For the WP5 Step 4 fresh-scope staging API, SQLite metadata, external-content FTS rebuild, the nonterminal `storing` status, and their verification counts use one connection and one transaction. Any Step 4 write failure rolls back the new repository scope. The post-commit rebuild described above remains the Step 5 coordinated full-replacement contract.
+
 ### FTS5 Row-Count Verification
 
 FTS5 row-count verification occurs before status becomes `complete`:
@@ -772,7 +774,7 @@ COMPLETE has no fatal diagnostics, ERROR has fatal diagnostics or error strings.
 
 ### IndexBuildResult
 
-Complete in-memory output of `IndexService.build_through_chunking()` (scan → parse → chunk) or `build_through_graphing()` (scan → parse → chunk → embed → graph).
+Output of `IndexService.build_through_chunking()` (scan → parse → chunk), `build_through_graphing()` (scan → parse → chunk → embed → graph), or `build_through_sqlite_fts()` (the same attempt plus SQLite metadata and FTS staging). Step 4 remains nonterminal at `STORING`; vectors and graph records are not persisted.
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
