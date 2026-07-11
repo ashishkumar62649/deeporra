@@ -369,3 +369,51 @@ def test_run_index_uses_one_complete_pipeline_attempt(tmp_path, monkeypatch):
     assert result.state == IndexState.COMPLETE
     assert calls["scan"] == calls["chunk"] == calls["encode"] == calls["graph"] == calls["inputs"] == calls["sqlite"] == calls["chroma"] == calls["graph_store"] == 1
     assert calls["parse"] == 3
+
+
+@pytest.mark.parametrize("mismatch", ["fts_unexpected_id", "chroma_unexpected_id", "graph_unexpected_node"])
+def test_cross_store_mismatch_is_rejected_before_promotion(tmp_path, monkeypatch, mismatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _write_a(repo)
+    fake_module = types.ModuleType("sentence_transformers")
+    fake_module.SentenceTransformer = _FakeSentenceTransformer
+    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    assert _service().build_complete_index(FCodeConfig(repo_path=str(repo))).run_result.state == IndexState.COMPLETE
+    before = _active_evidence(repo)
+    _write_b(repo)
+    if mismatch == "fts_unexpected_id":
+        monkeypatch.setattr(FTSStore, "get_chunk_ids", lambda self, *args: ["foreign-chunk-id"])
+    elif mismatch == "chroma_unexpected_id":
+        original = ChromaStore.get_embeddings
+        def extra_vector(self, *args):
+            result = original(self, *args)
+            result["ids"] = list(result.get("ids") or []) + ["foreign-chunk-id"]
+            result["metadatas"] = list(result.get("metadatas") or []) + [{"chunk_id": "foreign-chunk-id"}]
+            embeddings = result.get("embeddings")
+            result["embeddings"] = list(embeddings) + [[0.0] * EXPECTED_DIMENSION]
+            return result
+        monkeypatch.setattr(ChromaStore, "get_embeddings", extra_vector)
+    else:
+        original = GraphStore.get_nodes
+        monkeypatch.setattr(GraphStore, "get_nodes", lambda self, *args: original(self, *args) + [{"id": "foreign", "node_id": "foreign"}])
+    result = _service().build_complete_index(FCodeConfig(repo_path=str(repo)))
+    monkeypatch.undo()
+    after = _active_evidence(repo)
+    assert result.run_result.state == IndexState.ERROR
+    assert after["generation"] == before["generation"]
+    assert after["alpha"] and not after["beta"]
+
+
+def test_zero_eligible_embeddings_promotes_a_valid_empty_vector_generation(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "secret.py").write_text("API_TOKEN = 'ghp_abcdefghijklmnopqrstuvwxyz1234567890'\n", encoding="utf-8")
+    fake_module = types.ModuleType("sentence_transformers")
+    fake_module.SentenceTransformer = _FakeSentenceTransformer
+    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    result = _service().build_complete_index(FCodeConfig(repo_path=str(repo)))
+    active = _active_evidence(repo)
+    assert result.run_result.state == IndexState.COMPLETE
+    assert result.embedding_result.success_count == 0
+    assert active["vectors"] == set()
