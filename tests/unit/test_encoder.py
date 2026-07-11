@@ -1010,3 +1010,11 @@ class TestEmptyMetadataFilePath:
         inp = _input("c1", file_path="")
         with pytest.raises(ValueError, match="empty metadata file_path"):
             enc.encode([inp])
+
+
+# ── Package re-export ─────────────────────────────────────────────────────────
+
+
+def test_expected_dimension_re_export():
+    from fcode.embeddings import EXPECTED_DIMENSION as re_exported
+    assert re_exported == 384

@@ -1,6 +1,5 @@
 """Graph builder — build a code graph from parsed files."""
 
-import uuid
 from typing import Sequence
 
 from fcode.contracts import (
@@ -15,6 +14,14 @@ from fcode.contracts import (
     ParsedSymbol,
     SymbolType,
 )
+
+
+def _node_rid(node_id: str) -> str:
+    return "gn:" + node_id
+
+
+def _edge_rid(src: str, rel: str, tgt: str, sf: str = "", sl: str = "") -> str:
+    return "ge:" + src + ":" + rel + ":" + tgt + ":" + (sf or "_") + ":" + (sl or "_")
 
 
 def build(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
@@ -35,7 +42,7 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
         file_node_id = f"file:{pf.file_path}"
         nodes.append(
             GraphNodeInput(
-                record_id=str(uuid.uuid4()),
+                record_id=_node_rid(file_node_id),
                 node_id=file_node_id,
                 node_type=GraphNodeType.FILE,
                 label=pf.file_path,
@@ -60,7 +67,7 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
 
             nodes.append(
                 GraphNodeInput(
-                    record_id=str(uuid.uuid4()),
+                    record_id=_node_rid(node_id),
                     node_id=node_id,
                     node_type=node_type,
                     label=sym.name,
@@ -71,7 +78,7 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
             )
             edges.append(
                 GraphEdgeInput(
-                    record_id=str(uuid.uuid4()),
+                    record_id=_edge_rid(file_node_id, GraphRelation.DEFINES.value, node_id, pf.file_path, f"{pf.file_path}:{sym.start_line}"),
                     source_node_id=file_node_id,
                     target_node_id=node_id,
                     relation=GraphRelation.DEFINES,
@@ -86,7 +93,7 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
                 if parent_id in symbol_nodes:
                     edges.append(
                         GraphEdgeInput(
-                            record_id=str(uuid.uuid4()),
+                            record_id=_edge_rid(parent_id, GraphRelation.DEFINES.value, node_id, pf.file_path, f"{pf.file_path}:{sym.start_line}"),
                             source_node_id=parent_id,
                             target_node_id=node_id,
                             relation=GraphRelation.DEFINES,
@@ -104,7 +111,7 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
             seen_node_ids.add(import_node_id)
             nodes.append(
                 GraphNodeInput(
-                    record_id=str(uuid.uuid4()),
+                    record_id=_node_rid(import_node_id),
                     node_id=import_node_id,
                     node_type=GraphNodeType.IMPORT,
                     label=imp.module_name,
@@ -124,7 +131,7 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
                 seen_canonical_edges.add(edge_triple)
                 edges.append(
                     GraphEdgeInput(
-                        record_id=str(uuid.uuid4()),
+                        record_id=_edge_rid(file_node_id, GraphRelation.IMPORTS.value, import_node_id, pf.file_path, f"{pf.file_path}:{imp.line_number}"),
                         source_node_id=file_node_id,
                         target_node_id=import_node_id,
                         relation=GraphRelation.IMPORTS,
@@ -142,11 +149,19 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
 
         for route in pf.routes:
             route_node_id = route.route_id
-            if route_node_id not in seen_node_ids:
+            if route_node_id in seen_node_ids:
+                for existing in nodes:
+                    if existing.node_id == route_node_id:
+                        existing.label = f"{route.method.value} {route.route_path}"
+                        existing.source_file = pf.file_path
+                        existing.source_location = f"{pf.file_path}:{route.start_line}"
+                        existing.confidence = route.confidence
+                        break
+            else:
                 seen_node_ids.add(route_node_id)
                 nodes.append(
                     GraphNodeInput(
-                        record_id=str(uuid.uuid4()),
+                        record_id=_node_rid(route_node_id),
                         node_id=route_node_id,
                         node_type=GraphNodeType.ROUTE,
                         label=f"{route.method.value} {route.route_path}",
@@ -168,7 +183,7 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
                     seen_canonical_edges.add(defines_triple)
                     edges.append(
                         GraphEdgeInput(
-                            record_id=str(uuid.uuid4()),
+                            record_id=_edge_rid(handler_id, GraphRelation.DEFINES.value, route_node_id, pf.file_path, f"{pf.file_path}:{route.start_line}"),
                             source_node_id=handler_id,
                             target_node_id=route_node_id,
                             relation=GraphRelation.DEFINES,
@@ -183,7 +198,7 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
                     seen_canonical_edges.add(hr_triple)
                     edges.append(
                         GraphEdgeInput(
-                            record_id=str(uuid.uuid4()),
+                            record_id=_edge_rid(route_node_id, GraphRelation.HANDLES_ROUTE.value, handler_id, pf.file_path, f"{pf.file_path}:{route.start_line}"),
                             source_node_id=route_node_id,
                             target_node_id=handler_id,
                             relation=GraphRelation.HANDLES_ROUTE,
@@ -231,7 +246,7 @@ def _add_inherits_edges(
                     if target_node_id:
                         edges.append(
                             GraphEdgeInput(
-                                record_id=str(uuid.uuid4()),
+                                record_id=_edge_rid(source_node_id, GraphRelation.INHERITS.value, target_node_id, "", f"{sym.symbol_id}:{sym.start_line}"),
                                 source_node_id=source_node_id,
                                 target_node_id=target_node_id,
                                 relation=GraphRelation.INHERITS,
@@ -265,7 +280,7 @@ def _add_calls_edges(
                     if target_node_id and target_node_id != source_node_id:
                         edges.append(
                             GraphEdgeInput(
-                                record_id=str(uuid.uuid4()),
+                                record_id=_edge_rid(source_node_id, GraphRelation.CALLS.value, target_node_id, "", f"{sym.symbol_id}:{sym.start_line}"),
                                 source_node_id=source_node_id,
                                 target_node_id=target_node_id,
                                 relation=GraphRelation.CALLS,
@@ -298,7 +313,7 @@ def _add_tests_edges(
                     if target_node_id:
                         edges.append(
                             GraphEdgeInput(
-                                record_id=str(uuid.uuid4()),
+                                record_id=_edge_rid(source_node_id, GraphRelation.TESTS.value, target_node_id, "", f"{sym.symbol_id}:{sym.start_line}"),
                                 source_node_id=source_node_id,
                                 target_node_id=target_node_id,
                                 relation=GraphRelation.TESTS,

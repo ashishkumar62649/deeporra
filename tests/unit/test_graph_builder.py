@@ -411,3 +411,59 @@ def test_node_and_edge_count_matches():
     result = build([pf1, pf2])
     assert result.node_count == len(result.nodes)
     assert result.edge_count == len(result.edges)
+
+
+# ── Deterministic record IDs ──────────────────────────────────────────────────
+
+
+def test_deterministic_node_record_ids():
+    pf = _pf("mod.py")
+    pf.symbols.append(_sym("foo", SymbolType.FUNCTION))
+    r1 = build([pf])
+    r2 = build([pf])
+    rids1 = sorted(n.record_id for n in r1.nodes)
+    rids2 = sorted(n.record_id for n in r2.nodes)
+    assert rids1 == rids2
+
+
+def test_deterministic_edge_record_ids():
+    pf = _pf("mod.py")
+    pf.symbols.append(_sym("foo", SymbolType.FUNCTION))
+    r1 = build([pf])
+    r2 = build([pf])
+    erids1 = sorted(e.record_id for e in r1.edges)
+    erids2 = sorted(e.record_id for e in r2.edges)
+    assert erids1 == erids2
+
+
+def test_node_record_id_format():
+    pf = _pf("mod.py")
+    pf.symbols.append(_sym("foo", SymbolType.FUNCTION))
+    result = build([pf])
+    for n in result.nodes:
+        assert n.record_id == "gn:" + n.node_id, f"record_id {n.record_id} != gn:{n.node_id}"
+
+
+def test_edge_record_id_format():
+    pf = _pf("mod.py")
+    pf.symbols.append(_sym("foo", SymbolType.FUNCTION))
+    result = build([pf])
+    for e in result.edges:
+        assert e.record_id.startswith("ge:"), f"edge record_id {e.record_id} missing ge: prefix"
+
+
+# ── Route payload preservation ────────────────────────────────────────────────
+
+
+def test_route_payload_from_parsed_route_not_symbol():
+    rid = "route:GET:/test:routes.py:1"
+    pf = _pf("routes.py")
+    pf.routes.append(_route("test", "handler", route_id=rid))
+    sym = _sym("wrong_name", SymbolType.ROUTE, symbol_id=rid)
+    pf.symbols.append(sym)
+    pf.symbols.append(_sym("handler", SymbolType.FUNCTION))
+    result = build([pf])
+    route_nodes = [n for n in result.nodes if n.node_type == GraphNodeType.ROUTE]
+    assert len(route_nodes) == 1
+    assert route_nodes[0].label == "GET /test", f"expected 'GET /test', got '{route_nodes[0].label}'"
+    assert route_nodes[0].source_file == "routes.py"
