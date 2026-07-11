@@ -46,8 +46,9 @@ class TestChromaBasic:
             chunk_id="test-1",
             vector=[0.1] * 384,
             metadata=EmbeddingMetadata(
-                source_file="test.py",
                 chunk_id="test-1",
+                file_path="test.py",
+                symbol_name="",
                 chunk_type=ChunkType.FILE_SUMMARY,
                 start_line=1,
                 end_line=10,
@@ -61,7 +62,7 @@ class TestChromaBasic:
             chunk_id="dup-1",
             vector=[0.1] * 384,
             metadata=EmbeddingMetadata(
-                source_file="a.py", chunk_id="dup-1",
+                chunk_id="dup-1", file_path="a.py", symbol_name="",
                 chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
@@ -69,7 +70,7 @@ class TestChromaBasic:
             chunk_id="dup-1",
             vector=[0.2] * 384,
             metadata=EmbeddingMetadata(
-                source_file="b.py", chunk_id="dup-1",
+                chunk_id="dup-1", file_path="b.py", symbol_name="",
                 chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
@@ -84,7 +85,7 @@ class TestRepositoryIsolation:
             chunk_id="r1-1",
             vector=[0.1] * 384,
             metadata=EmbeddingMetadata(
-                source_file="a.py", chunk_id="r1-1",
+                chunk_id="r1-1", file_path="a.py", symbol_name="",
                 chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
@@ -92,7 +93,7 @@ class TestRepositoryIsolation:
             chunk_id="r2-1",
             vector=[0.2] * 384,
             metadata=EmbeddingMetadata(
-                source_file="b.py", chunk_id="r2-1",
+                chunk_id="r2-1", file_path="b.py", symbol_name="",
                 chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
@@ -106,7 +107,7 @@ class TestRepositoryIsolation:
             chunk_id="del-1",
             vector=[0.1] * 384,
             metadata=EmbeddingMetadata(
-                source_file="a.py", chunk_id="del-1",
+                chunk_id="del-1", file_path="a.py", symbol_name="",
                 chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
@@ -114,7 +115,7 @@ class TestRepositoryIsolation:
             chunk_id="del-2",
             vector=[0.2] * 384,
             metadata=EmbeddingMetadata(
-                source_file="b.py", chunk_id="del-2",
+                chunk_id="del-2", file_path="b.py", symbol_name="",
                 chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
@@ -131,7 +132,7 @@ class TestVectorValidation:
             chunk_id="dim-ok",
             vector=[0.5] * 384,
             metadata=EmbeddingMetadata(
-                source_file="d.py", chunk_id="dim-ok",
+                chunk_id="dim-ok", file_path="d.py", symbol_name="",
                 chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
@@ -143,7 +144,7 @@ class TestVectorValidation:
             chunk_id="dim-bad",
             vector=[0.5] * 100,
             metadata=EmbeddingMetadata(
-                source_file="d.py", chunk_id="dim-bad",
+                chunk_id="dim-bad", file_path="d.py", symbol_name="",
                 chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
@@ -157,7 +158,7 @@ class TestMetadata:
             chunk_id="no-sym",
             vector=[0.1] * 384,
             metadata=EmbeddingMetadata(
-                source_file="n.py", chunk_id="no-sym",
+                chunk_id="no-sym", file_path="n.py", symbol_name="",
                 chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
@@ -170,7 +171,7 @@ class TestMetadata:
             chunk_id="no-lang",
             vector=[0.1] * 384,
             metadata=EmbeddingMetadata(
-                source_file="l.py", chunk_id="no-lang",
+                chunk_id="no-lang", file_path="l.py", symbol_name="",
                 chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
@@ -183,7 +184,7 @@ class TestMetadata:
             chunk_id="no-null",
             vector=[0.1] * 384,
             metadata=EmbeddingMetadata(
-                source_file="nn.py", chunk_id="no-null",
+                chunk_id="no-null", file_path="nn.py", symbol_name="",
                 chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )
@@ -205,7 +206,7 @@ class TestPersistence:
             chunk_id="persist-1",
             vector=[0.3] * 384,
             metadata=EmbeddingMetadata(
-                source_file="p.py", chunk_id="persist-1",
+                chunk_id="persist-1", file_path="p.py", symbol_name="",
                 chunk_type=ChunkType.FILE_SUMMARY, start_line=1, end_line=5,
             ),
         )

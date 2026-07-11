@@ -16,6 +16,10 @@ class ErrorCode(str, Enum):
     GRAPH_BUILD_FAILED = "graph_build_failed"
     # Embed
     EMBEDDING_FAILED = "embedding_failed"
+    EMBEDDING_MODEL_UNAVAILABLE = "embedding_model_unavailable"
+    EMBEDDING_DIMENSION_MISMATCH = "embedding_dimension_mismatch"
+    EMBEDDING_ALL_CHUNKS_FAILED = "embedding_all_chunks_failed"
+    EMBEDDING_CHUNK_WARNING = "embedding_chunk_warning"
     # Persist
     PERSIST_FAILED = "persist_failed"
     # General

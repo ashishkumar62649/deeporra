@@ -46,7 +46,8 @@ class ChunkerProtocol(Protocol):
 
 
 class EmbeddingEncoderProtocol(Protocol):
-    def encode(self, inputs: list[EmbeddingInput]) -> list[EmbeddingRecord]: ...
+    def ensure_available(self) -> None: ...
+    def encode(self, inputs: list[EmbeddingInput]) -> EmbeddingBatchResult: ...
 
 
 class SQLiteStoreProtocol(Protocol):

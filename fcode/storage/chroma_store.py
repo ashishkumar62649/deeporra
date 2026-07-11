@@ -65,19 +65,17 @@ class ChromaStore:
             meta = {
                 "chunk_id": rec.metadata.chunk_id,
                 "repo_id": repo_id,
-                "file_path": rec.metadata.source_file or "",
-                "symbol_name": rec.metadata.symbol_name if hasattr(rec.metadata, "symbol_name") else "",
+                "file_path": rec.metadata.file_path or "",
+                "symbol_name": rec.metadata.symbol_name or "",
                 "chunk_type": rec.metadata.chunk_type.value if hasattr(rec.metadata.chunk_type, "value") else str(rec.metadata.chunk_type),
-                "language": rec.metadata.language if hasattr(rec.metadata, "language") else "",
+                "language": rec.metadata.language or "",
                 "start_line": rec.metadata.start_line,
                 "end_line": rec.metadata.end_line,
             }
             ids.append(rec.metadata.chunk_id)
             embeddings.append(rec.vector)
             metadatas.append(meta)
-            documents.append(
-                rec.metadata.source_file if hasattr(rec.metadata, "source_file") else ""
-            )
+            documents.append(rec.metadata.file_path or "")
 
         if ids:
             self.collection.upsert(
@@ -101,7 +99,7 @@ class ChromaStore:
     def store_embeddings(self, records: list[EmbeddingRecord]) -> None:
         if not records:
             return
-        repo_id = records[0].metadata.source_file if hasattr(records[0].metadata, "source_file") else ""
+        repo_id = ""
         self.upsert_embeddings(repo_id, records)
 
     def reset(self) -> None:

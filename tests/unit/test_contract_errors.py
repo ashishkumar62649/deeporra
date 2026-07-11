@@ -22,6 +22,10 @@ class TestErrorCodeContract:
         assert ErrorCode.PERSIST_FAILED.value == "persist_failed"
         assert ErrorCode.UNEXPECTED_ERROR.value == "unexpected_error"
         assert ErrorCode.NOT_IMPLEMENTED.value == "not_implemented"
+        assert ErrorCode.EMBEDDING_MODEL_UNAVAILABLE.value == "embedding_model_unavailable"
+        assert ErrorCode.EMBEDDING_DIMENSION_MISMATCH.value == "embedding_dimension_mismatch"
+        assert ErrorCode.EMBEDDING_ALL_CHUNKS_FAILED.value == "embedding_all_chunks_failed"
+        assert ErrorCode.EMBEDDING_CHUNK_WARNING.value == "embedding_chunk_warning"
 
     def test_mcp_error_code_values(self):
         assert McpErrorCode.INVALID_INPUT.value == "invalid_input"

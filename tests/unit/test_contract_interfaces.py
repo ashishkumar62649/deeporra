@@ -28,6 +28,9 @@ class TestProtocolsStructure:
     def test_chunker_has_chunk_method(self):
         assert hasattr(ChunkerProtocol, "chunk")
 
+    def test_encoder_has_ensure_available(self):
+        assert hasattr(EmbeddingEncoderProtocol, "ensure_available")
+
     def test_encoder_has_encode_method(self):
         assert hasattr(EmbeddingEncoderProtocol, "encode")
 

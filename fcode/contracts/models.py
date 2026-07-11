@@ -31,8 +31,11 @@ class RepoInput:
 
 @dataclass
 class EmbeddingInput:
-    text: str
+    chunk_id: str
+    content: str
     metadata: "EmbeddingMetadata"
+    has_secrets: bool = False
+    parse_status: ParseStatus = ParseStatus.PARSED
 
 
 @dataclass
@@ -69,11 +72,13 @@ class GraphEdgeInput:
 
 @dataclass
 class EmbeddingMetadata:
-    source_file: str
     chunk_id: str
+    file_path: str
+    symbol_name: str
     chunk_type: ChunkType
-    start_line: int
-    end_line: int
+    language: Optional[str] = None
+    start_line: int = 0
+    end_line: int = 0
 
 
 # ── Scan results ────────────────────────────────────────────────────────────
@@ -216,8 +221,12 @@ class EmbeddingRecord:
 
 @dataclass
 class EmbeddingBatchResult:
+    records: list[EmbeddingRecord] = field(default_factory=list)
+    eligible_count: int = 0
     success_count: int = 0
     fail_count: int = 0
+    skipped_count: int = 0
+    warnings: list[dict[str, Any]] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
 
