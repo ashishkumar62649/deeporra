@@ -10,10 +10,10 @@ class ActiveStatusReader:
         self._coordinator = FullRebuildCoordinator(repo_path)
 
     def read(self) -> IndexStatusRecord:
-        if self._coordinator.active_generation() is None:
+        generation = self._coordinator.active_generation()
+        if generation is None:
             return IndexStatusRecord(state=IndexState.PENDING, message="No active index.")
-        paths = self._coordinator.active_paths()
-        store = SQLiteStore(str(paths.database))
+        store = SQLiteStore(str(self._coordinator.workspace / "generations" / generation / "index.db"))
         try:
             store.connect()
             repo_id = store.find_repository(str(self._coordinator.workspace.parent))
