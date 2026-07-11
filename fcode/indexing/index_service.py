@@ -36,6 +36,7 @@ from fcode.contracts import (
     IndexDiagnostic,
     IndexPhase,
     IndexRunResult,
+    IndexStatusRecord,
     IndexState,
     ParseStatus,
     ParsedFile,
@@ -89,6 +90,7 @@ class IndexService:
         graph_builder: Optional[GraphBuilderProtocol] = None,
         sqlite_store: Optional[SQLiteStoreProtocol] = None,
         fts_store: Optional[FTSStoreProtocol] = None,
+        status_reader=None,
     ) -> None:
         if scanner is None:
             raise TypeError("scanner must not be None")
@@ -103,6 +105,7 @@ class IndexService:
         self._graph_builder = graph_builder
         self._sqlite_store = sqlite_store
         self._fts_store = fts_store
+        self._status_reader = status_reader
 
     # ── Public operations ──────────────────────────────────────────────────
 
@@ -195,6 +198,14 @@ class IndexService:
     def run_index(self, config: FCodeConfig) -> IndexRunResult:
         """Run one complete indexing attempt and return its final run result."""
         return self.build_complete_index(config).run_result
+
+    def get_status(self) -> IndexStatusRecord:
+        if self._status_reader is None:
+            raise TypeError("status_reader is required for get_status")
+        return self._status_reader.read()
+
+    def get_counts(self) -> IndexCounts:
+        return self.get_status().counts
 
     # ── Per-attempt scaffolding ─────────────────────────────────────────────
 

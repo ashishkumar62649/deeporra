@@ -71,8 +71,8 @@ python -m pytest tests/ -v
 
 | Command | Description | Status |
 |---------|-------------|--------|
-| `fcode index <repo>` | Scan, parse, embed, and build graph for a repository | Functional |
-| `fcode status [repo]` | Show index status and stats | Functional |
+| `fcode index [repo]` | Perform a full local rebuild and safely promote it | Functional |
+| `fcode status [repo]` | Show the active complete generation status and counts | Functional |
 | `fcode doctor` | Check dependencies and environment health | Functional |
 | `fcode dashboard` | Start Streamlit dashboard on localhost | Planned (WP6) |
 | `fcode mcp --repo <repo>` | Start MCP stdio server for coding agents | Planned (WP6) |

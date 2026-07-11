@@ -358,15 +358,15 @@ class TestConstructorAPI:
                           chunker=MagicMock())
         assert hasattr(s, "run_index")
 
-    def test_get_status_absent(self):
+    def test_get_status_exists_for_step6(self):
         s = IndexService(scanner=MagicMock(), parser=MagicMock(),
                           chunker=MagicMock())
-        assert not hasattr(s, "get_status")
+        assert hasattr(s, "get_status")
 
-    def test_get_counts_absent(self):
+    def test_get_counts_exists_for_step6(self):
         s = IndexService(scanner=MagicMock(), parser=MagicMock(),
                           chunker=MagicMock())
-        assert not hasattr(s, "get_counts")
+        assert hasattr(s, "get_counts")
 
 
 _UNSET = object()

@@ -4,7 +4,8 @@ from typing import Optional
 
 import typer
 
-from fcode.contracts import IndexServiceProtocol
+from fcode.cli.dependencies import create_index_service, resolve_config
+from fcode.contracts import DiagnosticSeverity, IndexServiceProtocol, IndexState
 
 _index_service: Optional[IndexServiceProtocol] = None
 
@@ -19,8 +20,26 @@ def set_index_service(service: IndexServiceProtocol) -> None:
 
 
 def index_cmd(
-    repo_path: str = typer.Argument(..., help="Path to repository to index"),
+    repo_path: str = typer.Argument(".", help="Path to repository to index"),
 ) -> None:
-    """Scan, parse, embed, and build graph for a repository."""
-    typer.echo("Index command implementation has not started.")
-    raise typer.Exit(code=1)
+    """Perform a full local rebuild of a repository index."""
+    try:
+        config = resolve_config(repo_path)
+        service = get_index_service() or create_index_service(config)
+        result = service.run_index(config)
+    except Exception:
+        typer.echo("Index failed.")
+        raise typer.Exit(code=1)
+    if result.state != IndexState.COMPLETE:
+        typer.echo("Index failed.")
+        for diagnostic in result.diagnostics:
+            if diagnostic.severity == DiagnosticSeverity.ERROR:
+                typer.echo(f"error: {diagnostic.code}: {diagnostic.message}")
+        raise typer.Exit(code=1)
+    counts = result.counts
+    typer.echo("Index complete.")
+    typer.echo(
+        f"scanned={counts.scanned} parsed={counts.parsed} chunks={counts.chunks} "
+        f"embedded={counts.embedded} graph_nodes={counts.graph_nodes} "
+        f"graph_edges={counts.graph_edges} warnings={counts.warnings}"
+    )

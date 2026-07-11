@@ -14,8 +14,8 @@ def test_complete_index_api_is_present_without_constructor_io():
     service = IndexService(scanner, parser, chunker)
     assert hasattr(service, "build_complete_index")
     assert hasattr(service, "run_index")
-    assert not hasattr(service, "get_status")
-    assert not hasattr(service, "get_counts")
+    assert hasattr(service, "get_status")
+    assert hasattr(service, "get_counts")
     assert list(inspect.signature(service.build_complete_index).parameters) == ["config"]
     scanner.assert_not_called()
     parser.assert_not_called()

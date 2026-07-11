@@ -39,7 +39,7 @@ class TestComposition:
         set_index_service(fake)
         assert get_index_service() is fake
 
-    def test_set_service_does_not_affect_placeholder(self):
+    def test_set_service_is_process_local(self):
         fake = FakeIndexService()
         set_index_service(fake)
         result = subprocess.run(
@@ -47,18 +47,18 @@ class TestComposition:
             capture_output=True, text=True, timeout=15,
         )
         assert result.returncode == 1
-        assert "Index command implementation has not started." in result.stdout
+        assert "Index complete." not in result.stdout
 
     def test_configure_app_in_main(self):
         from fcode.cli.main import configure_app
         assert configure_app is not None
 
 
-class TestPlaceholder:
-    def test_placeholder_unchanged(self):
+class TestCommand:
+    def test_failure_is_sanitized(self):
         result = subprocess.run(
             [sys.executable, "-m", "fcode", "index", "."],
             capture_output=True, text=True, timeout=15,
         )
         assert result.returncode == 1
-        assert "Index command implementation has not started." in result.stdout
+        assert "Index failed." in result.stdout

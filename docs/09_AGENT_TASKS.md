@@ -453,6 +453,10 @@ Step 4 added `IndexService.build_through_sqlite_fts()` with keyword-only injecte
 
 Step 5 added `build_complete_index()` and its thin `run_index()` wrapper. The complete in-memory attempt enters `STORING`, writes SQLite/FTS, local Chroma vectors, and graph rows to an isolated `.fcode/generations/<generation>` directory, verifies the reopened stores, marks the staged status `complete`, and atomically promotes `.fcode/active.json`. The prior active generation remains usable until promotion verification succeeds; failed stages and stale managed staging markers are removed safely. Full rebuild only is supported. Incremental indexing, source edits, hosted services, CLI activation, Step 6 command exposure, and Step 7 final acceptance remain deferred.
 
+### WP5 Step 6 — Complete
+
+Step 6 activates the existing `fcode index [repo]` and `fcode status [repo]` commands. Index lazily composes the accepted local pipeline and calls `run_index()` once. Status is bound to the requested repository, reads only `.fcode/active.json` and its referenced complete generation, and returns canonical persisted counts without scanning, model loading, or workspace mutation. No active index is a healthy status result; invalid active metadata is a sanitized failure. Step 7 remains responsible for final acceptance, branch review, and merge.
+
 ### Remaining WP5 Steps
 
 **Agent Name:** Integration Agent

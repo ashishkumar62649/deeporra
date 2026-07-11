@@ -23,6 +23,8 @@ routes, semantic chunks, FTS indexes, and a `storing` status. Success stops nont
 with `phase=PERSIST`, `completed_phase=GRAPH`, and `persistent_replacement_started=True`.
 Step 5 implements full rebuild only: it stages SQLite/FTS, local Chroma vectors, and graph records in an inactive generation; verifies cross-store IDs, counts, dimensions, endpoints, and status; then atomically promotes the active-generation pointer. Success is `COMPLETE` with `phase=PERSIST` and `completed_phase=PERSIST`. Failed stages leave the previous active generation intact. There is no incremental indexing, automatic source edit, hosted service, or CLI activation; Step 6 owns `fcode index` and `fcode status`, and Step 7 owns final acceptance and merge.
 
+Step 6 exposes `fcode index [repo]` for one full local rebuild (exit 0 on `complete`, 1 on a sanitized domain failure) and `fcode status [repo]` for the active generation only. Status exits 0 with `No active index.` when no pointer exists; malformed or unavailable active metadata exits 1 without fallback generation selection.
+
 ### State progression
 
 ```
