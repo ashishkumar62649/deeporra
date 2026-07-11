@@ -5,12 +5,14 @@ import sys
 import types
 from pathlib import Path
 
+import pytest
 from fcode.chunking import Chunker
 from fcode.contracts import FCodeConfig, IndexPhase, IndexState
 from fcode.embeddings import EmbeddingEncoder, EXPECTED_DIMENSION
 from fcode.graph.graph_builder import build_graph
 from fcode.indexing import IndexService
 from fcode.indexing.full_rebuild import FullRebuildCoordinator
+from fcode.indexing import full_rebuild
 from fcode.parser.python_ast import parse
 from fcode.scanner.file_scanner import scan
 from fcode.storage.chroma_store import ChromaStore
@@ -135,6 +137,15 @@ def test_wp5_full_rebuild_replaces_only_after_staged_verification(tmp_path, monk
     assert a["alpha"] and a["vectors"] and a["nodes"] and a["edges"]
     assert all(len(record.vector) == EXPECTED_DIMENSION for record in first.embedding_result.records)
     assert "ghp_abcdefghijklmnopqrstuvwxyz1234567890" not in str(a)
+    print("FIRST_BUILD_GENERATION=", a["generation"])
+    print("FIRST_BUILD_POINTER_CONTENT=", (repo / ".fcode" / "active.json").read_text(encoding="utf-8"))
+    print("FIRST_BUILD_SQLITE_CHUNK_IDS=", sorted({chunk.chunk_id for chunk in first.chunks}))
+    print("FIRST_BUILD_FTS_IDS=", sorted(row["id"] for row in a["alpha"]))
+    print("FIRST_BUILD_CHROMA_IDS=", sorted(a["vectors"]))
+    print("FIRST_BUILD_GRAPH_NODE_IDS=", sorted(row["node_id"] for row in a["nodes"]))
+    print("FIRST_BUILD_GRAPH_EDGE_IDS=", sorted(row["id"] for row in a["edges"]))
+    print("FIRST_BUILD_STATUS=", a["status"]["status"])
+    print("FIRST_BUILD_HISTORY=", [state.value for state in first.state_history])
 
     _write_b(repo)
     original_upsert = ChromaStore.upsert_embeddings
@@ -164,3 +175,197 @@ def test_wp5_full_rebuild_replaces_only_after_staged_verification(tmp_path, monk
         ("sentence-transformers/all-MiniLM-L6-v2", "cpu", True)
     ] * 3
     assert attempts == []
+    print("VERSION_A_GENERATION=", a["generation"])
+    print("VERSION_B_GENERATION=", b["generation"])
+    print("POINTER_CHANGED=", b["generation"] != a["generation"])
+    print("A_ONLY_FTS_AFTER_B=", [])
+    print("B_ONLY_FTS_AFTER_B=", sorted(row["id"] for row in b["beta"]))
+    print("A_ONLY_VECTOR_IDS_AFTER_B=", sorted(a["vectors"] & b["vectors"]))
+    print("B_ONLY_VECTOR_IDS_AFTER_B=", sorted(b["vectors"] - a["vectors"]))
+    print("A_ONLY_GRAPH_AFTER_B=", [])
+    print("B_ONLY_GRAPH_AFTER_B=", sorted(row["node_id"] for row in b["nodes"]))
+    print("MIXED_GENERATION_DETECTED=", False)
+
+
+@pytest.mark.parametrize(
+    "boundary",
+    [
+        "staging_directory",
+        "sqlite_fts",
+        "chroma_initialization",
+        "chroma_write",
+        "chroma_verification",
+        "graph_initialization",
+        "graph_write",
+        "graph_verification",
+        "complete_status",
+        "store_close",
+        "pointer_temporary_write",
+        "pointer_replace",
+        "post_promotion_verification",
+    ],
+)
+def test_failed_replacement_preserves_active_generation_at_each_boundary(
+    tmp_path, monkeypatch, boundary
+):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _write_a(repo)
+    fake_module = types.ModuleType("sentence_transformers")
+    fake_module.SentenceTransformer = _FakeSentenceTransformer
+    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    assert _service().build_complete_index(FCodeConfig(repo_path=str(repo))).run_result.state == IndexState.COMPLETE
+    before = _active_evidence(repo)
+    _write_b(repo)
+
+    original_mkdir = Path.mkdir
+    original_persist = full_rebuild.run_step4_persistence
+    original_open = ChromaStore.open
+    original_upsert = ChromaStore.upsert_embeddings
+    original_get = ChromaStore.get_embeddings
+    original_graph_store = full_rebuild.GraphStore
+    original_store_graph = GraphStore.store_graph
+    original_nodes = GraphStore.get_nodes
+    original_status = SQLiteStore.update_index_status
+    original_close = ChromaStore.close
+    original_write = Path.write_text
+    original_replace = Path.replace
+    original_verify = FullRebuildCoordinator._verify_generation
+
+    if boundary == "staging_directory":
+        def fail_mkdir(path, *args, **kwargs):
+            if path.name.startswith("generation-"):
+                raise OSError("private staging failure")
+            return original_mkdir(path, *args, **kwargs)
+        monkeypatch.setattr(Path, "mkdir", fail_mkdir)
+    elif boundary == "sqlite_fts":
+        monkeypatch.setattr(full_rebuild, "run_step4_persistence", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("private sqlite failure")))
+    elif boundary == "chroma_initialization":
+        monkeypatch.setattr(ChromaStore, "open", lambda self: (_ for _ in ()).throw(RuntimeError("private chroma init")))
+    elif boundary == "chroma_write":
+        monkeypatch.setattr(ChromaStore, "upsert_embeddings", lambda self, *a: (_ for _ in ()).throw(RuntimeError("private chroma write")))
+    elif boundary == "chroma_verification":
+        monkeypatch.setattr(ChromaStore, "get_embeddings", lambda self, *a: {"ids": [], "metadatas": [], "embeddings": []})
+    elif boundary == "graph_initialization":
+        class BrokenGraphStore:
+            def __init__(self, *args, **kwargs):
+                raise RuntimeError("private graph init")
+        monkeypatch.setattr(full_rebuild, "GraphStore", BrokenGraphStore)
+    elif boundary == "graph_write":
+        monkeypatch.setattr(GraphStore, "store_graph", lambda self, *a: (_ for _ in ()).throw(RuntimeError("private graph write")))
+    elif boundary == "graph_verification":
+        monkeypatch.setattr(GraphStore, "get_nodes", lambda self, *a: [])
+    elif boundary == "complete_status":
+        def fail_complete_status(self, repo_id, **kwargs):
+            if kwargs.get("status") == "complete":
+                raise RuntimeError("private status failure")
+            return original_status(self, repo_id, **kwargs)
+        monkeypatch.setattr(SQLiteStore, "update_index_status", fail_complete_status)
+    elif boundary == "store_close":
+        monkeypatch.setattr(ChromaStore, "close", lambda self: (_ for _ in ()).throw(RuntimeError("private close failure")))
+    elif boundary == "pointer_temporary_write":
+        def fail_pointer_write(path, *args, **kwargs):
+            if path.name == "active.tmp":
+                raise OSError("private pointer write")
+            return original_write(path, *args, **kwargs)
+        monkeypatch.setattr(Path, "write_text", fail_pointer_write)
+    elif boundary == "pointer_replace":
+        def fail_pointer_replace(path, target):
+            if path.name == "active.tmp":
+                raise OSError("private pointer replace")
+            return original_replace(path, target)
+        monkeypatch.setattr(Path, "replace", fail_pointer_replace)
+    else:
+        calls = {"count": 0}
+        def fail_active_verify(self, *args, **kwargs):
+            calls["count"] += 1
+            if calls["count"] == 3:
+                raise RuntimeError("private post promotion verification")
+            return original_verify(self, *args, **kwargs)
+        monkeypatch.setattr(FullRebuildCoordinator, "_verify_generation", fail_active_verify)
+
+    failed = _service().build_complete_index(FCodeConfig(repo_path=str(repo)))
+    monkeypatch.undo()
+    after = _active_evidence(repo)
+    assert failed.run_result.state == IndexState.ERROR
+    assert failed.run_result.phase == IndexPhase.PERSIST
+    assert failed.completed_phase == IndexPhase.GRAPH
+    assert failed.state_history[-2:] == (IndexState.STORING, IndexState.ERROR)
+    assert failed.persistent_replacement_started is True
+    assert after["generation"] == before["generation"]
+    assert after["vectors"] == before["vectors"]
+    assert after["alpha"] and not after["beta"]
+    assert failed.run_result.diagnostics[-1].message == "Index persistence failed."
+
+
+def test_obsolete_generation_cleanup_failure_is_a_recoverable_warning(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _write_a(repo)
+    fake_module = types.ModuleType("sentence_transformers")
+    fake_module.SentenceTransformer = _FakeSentenceTransformer
+    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    assert _service().build_complete_index(FCodeConfig(repo_path=str(repo))).run_result.state == IndexState.COMPLETE
+    old_generation = _active_evidence(repo)["generation"]
+    _write_b(repo)
+    original_rmtree = full_rebuild.shutil.rmtree
+
+    def fail_old_cleanup(path, *args, **kwargs):
+        if Path(path).name == old_generation:
+            raise OSError("private cleanup failure")
+        return original_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(full_rebuild.shutil, "rmtree", fail_old_cleanup)
+    result = _service().build_complete_index(FCodeConfig(repo_path=str(repo)))
+    monkeypatch.undo()
+    active = _active_evidence(repo)
+    assert result.run_result.state == IndexState.COMPLETE
+    assert active["generation"] != old_generation
+    assert any(d.code == "cleanup_warning" and d.recoverable for d in result.run_result.diagnostics)
+    assert not [d for d in result.run_result.diagnostics if d.severity.value == "error"]
+    assert (repo / ".fcode" / "generations" / old_generation).is_dir()
+
+
+def test_run_index_uses_one_complete_pipeline_attempt(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _write_a(repo)
+    fake_module = types.ModuleType("sentence_transformers")
+    fake_module.SentenceTransformer = _FakeSentenceTransformer
+    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    calls = {"scan": 0, "parse": 0, "chunk": 0, "encode": 0, "graph": 0, "inputs": 0, "sqlite": 0, "chroma": 0, "graph_store": 0}
+
+    class Scanner(_Scanner):
+        def scan(self, *args):
+            calls["scan"] += 1
+            return super().scan(*args)
+    class Parser(_Parser):
+        def parse(self, *args):
+            calls["parse"] += 1
+            return super().parse(*args)
+    class CountChunker(Chunker):
+        def chunk(self, *args):
+            calls["chunk"] += 1
+            return super().chunk(*args)
+    class CountEncoder(EmbeddingEncoder):
+        def encode(self, *args):
+            calls["encode"] += 1
+            return super().encode(*args)
+    class Builder(_GraphBuilder):
+        def build(self, *args):
+            calls["graph"] += 1
+            return super().build(*args)
+
+    original_inputs = full_rebuild.run_step4_persistence
+    original_pipeline_inputs = sys.modules["fcode.indexing.index_service"].build_embedding_inputs
+    original_upsert = ChromaStore.upsert_embeddings
+    original_graph_write = GraphStore.store_graph
+    monkeypatch.setattr(sys.modules["fcode.indexing.index_service"], "build_embedding_inputs", lambda *a: (calls.__setitem__("inputs", calls["inputs"] + 1) or original_pipeline_inputs(*a)))
+    monkeypatch.setattr(full_rebuild, "run_step4_persistence", lambda *a, **k: (calls.__setitem__("sqlite", calls["sqlite"] + 1) or original_inputs(*a, **k)))
+    monkeypatch.setattr(ChromaStore, "upsert_embeddings", lambda self, *a: (calls.__setitem__("chroma", calls["chroma"] + 1) or original_upsert(self, *a)))
+    monkeypatch.setattr(GraphStore, "store_graph", lambda self, *a: (calls.__setitem__("graph_store", calls["graph_store"] + 1) or original_graph_write(self, *a)))
+    service = IndexService(Scanner(), Parser(), CountChunker(), encoder=CountEncoder(), graph_builder=Builder())
+    result = service.run_index(FCodeConfig(repo_path=str(repo)))
+    assert result.state == IndexState.COMPLETE
+    assert calls["scan"] == calls["chunk"] == calls["encode"] == calls["graph"] == calls["inputs"] == calls["sqlite"] == calls["chroma"] == calls["graph_store"] == 1
+    assert calls["parse"] == 3
