@@ -21,8 +21,7 @@ extends the pipeline through embedding (input construction + encoder call) and g
 uses the same state-machine attempt, and atomically stages repository/file metadata, parsed symbols and
 routes, semantic chunks, FTS indexes, and a `storing` status. Success stops nonterminally at `STORING`
 with `phase=PERSIST`, `completed_phase=GRAPH`, and `persistent_replacement_started=True`.
-Vector/Chroma persistence, graph persistence, coordinated full replacement, old-index removal,
-promotion to `COMPLETE`, `run_index`, status services, and CLI activation are deferred to Step 5.
+Step 5 implements full rebuild only: it stages SQLite/FTS, local Chroma vectors, and graph records in an inactive generation; verifies cross-store IDs, counts, dimensions, endpoints, and status; then atomically promotes the active-generation pointer. Success is `COMPLETE` with `phase=PERSIST` and `completed_phase=PERSIST`. Failed stages leave the previous active generation intact. There is no incremental indexing, automatic source edit, hosted service, or CLI activation; Step 6 owns `fcode index` and `fcode status`, and Step 7 owns final acceptance and merge.
 
 ### State progression
 

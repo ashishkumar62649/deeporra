@@ -353,10 +353,10 @@ class TestConstructorAPI:
         s = _make_step4_svc()
         assert hasattr(s, "build_through_sqlite_fts")
 
-    def test_run_index_absent(self):
+    def test_run_index_exists_for_complete_builds(self):
         s = IndexService(scanner=MagicMock(), parser=MagicMock(),
                           chunker=MagicMock())
-        assert not hasattr(s, "run_index")
+        assert hasattr(s, "run_index")
 
     def test_get_status_absent(self):
         s = IndexService(scanner=MagicMock(), parser=MagicMock(),

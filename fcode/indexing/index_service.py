@@ -47,6 +47,7 @@ from fcode.contracts import (
     SQLiteStoreProtocol,
 )
 from fcode.embeddings import build_embedding_inputs, EXPECTED_DIMENSION
+from fcode.indexing.full_rebuild import FullRebuildCoordinator
 from fcode.indexing.sqlite_fts_persistence import (
     AlreadyIndexedRepositoryError,
     run_step4_persistence,
@@ -166,6 +167,34 @@ class IndexService:
         if step3_result.run_result.state == IndexState.ERROR:
             return step3_result
         return self._run_step4(sm, diagnostics, compat_errors)
+
+    def build_complete_index(self, config: FCodeConfig) -> IndexBuildResult:
+        """Build and safely promote one complete local index generation."""
+        if not isinstance(config, FCodeConfig):
+            raise TypeError(f"expected FCodeConfig, got {type(config).__name__}")
+        if self._encoder is None:
+            raise TypeError("encoder is required for build_complete_index")
+        if self._graph_builder is None:
+            raise TypeError("graph_builder is required for build_complete_index")
+        scaffolding = self._fresh_attempt(config)
+        if scaffolding.fatal is not None:
+            return scaffolding.fatal
+        sm, diagnostics, compat_errors = (
+            scaffolding.sm,
+            scaffolding.diagnostics,
+            scaffolding.compat_errors,
+        )
+        result = self._run_step2(sm, diagnostics, compat_errors)
+        if result is not None:
+            return result
+        step3_result = self._run_step3(sm, diagnostics, compat_errors)
+        if step3_result.run_result.state == IndexState.ERROR:
+            return step3_result
+        return self._run_complete(sm, diagnostics, compat_errors)
+
+    def run_index(self, config: FCodeConfig) -> IndexRunResult:
+        """Run one complete indexing attempt and return its final run result."""
+        return self.build_complete_index(config).run_result
 
     # ── Per-attempt scaffolding ─────────────────────────────────────────────
 
@@ -803,6 +832,94 @@ class IndexService:
         for d in diagnostics:
             d.validate()
 
+        return IndexBuildResult(
+            run_result=run_result,
+            completed_phase=sm.completed_phase,
+            state_history=sm.history,
+            persistent_replacement_started=sm.persistent_replacement_started,
+            scan_result=scan_result,
+            parsed_files=parsed_files,
+            chunks=chunks,
+            embedding_result=embedding_result,
+            graph_result=graph_result,
+        )
+
+    def _run_complete(
+        self,
+        sm: IndexStateMachine,
+        diagnostics: list[IndexDiagnostic],
+        compat_errors: list[str],
+    ) -> IndexBuildResult:
+        d2 = self._step2_data
+        scan_result: ScanResult = d2["scan_result"]
+        parsed_files: list[ParsedFile] = d2["parsed_files"]
+        chunks: list[CodeChunk] = d2["chunks"]
+        embedding_result: EmbeddingBatchResult = self._step3_embedding_result
+        graph_result: GraphBuildResult = self._step3_graph_result
+        counts = IndexCounts(
+            scanned=scan_result.eligible_file_count,
+            parsed=d2["parse_ok_count"],
+            chunks=len(chunks),
+            parse_errors=d2["parse_err_count"],
+            symbols=d2["symbol_count"],
+            embedding_eligible=embedding_result.eligible_count,
+            embedded=embedding_result.success_count,
+            embedding_skipped=embedding_result.skipped_count,
+            embedding_failed=embedding_result.fail_count,
+            graph_nodes=graph_result.node_count,
+            graph_edges=graph_result.edge_count,
+            warnings=len([d for d in diagnostics if d.severity == DiagnosticSeverity.WARNING]),
+        )
+        try:
+            sm.transition(IndexState.STORING)
+            outcome = FullRebuildCoordinator(self._resolved_repo_path).build(
+                scan_result=scan_result,
+                parsed_files=parsed_files,
+                chunks=chunks,
+                embedding_result=embedding_result,
+                graph_result=graph_result,
+                counts=counts,
+            )
+            if outcome.cleanup_warning:
+                diagnostics.append(IndexDiagnostic(
+                    code="cleanup_warning",
+                    message="Previous inactive index cleanup was deferred.",
+                    phase=IndexPhase.PERSIST,
+                    recoverable=True,
+                    severity=DiagnosticSeverity.WARNING,
+                ))
+                counts.warnings += 1
+            sm.transition(IndexState.COMPLETE)
+        except Exception:
+            diagnostics.append(IndexDiagnostic(
+                code=ErrorCode.PERSIST_FAILED.value,
+                message="Index persistence failed.",
+                phase=IndexPhase.PERSIST,
+                recoverable=False,
+                severity=DiagnosticSeverity.ERROR,
+            ))
+            compat_errors.append("Index persistence failed.")
+            return self._build_step4_fatal(
+                sm,
+                diagnostics,
+                compat_errors,
+                scan_result=scan_result,
+                parsed_files=parsed_files,
+                chunks=chunks,
+                embedding_result=embedding_result,
+                graph_result=graph_result,
+                counts=counts,
+            )
+
+        run_result = IndexRunResult(
+            state=sm.state,
+            phase=sm.phase,
+            counts=counts,
+            diagnostics=diagnostics,
+            errors=compat_errors,
+        )
+        counts.validate()
+        run_result.validate()
         return IndexBuildResult(
             run_result=run_result,
             completed_phase=sm.completed_phase,

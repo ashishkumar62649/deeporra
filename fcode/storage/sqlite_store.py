@@ -291,6 +291,15 @@ class SQLiteStore:
         ).fetchone()
         return row["cnt"] if row else 0
 
+    def get_chunk_ids(self, repo_id: str) -> list[str]:
+        rows = self._conn.execute(
+            "SELECT id FROM chunks WHERE repo_id = ? ORDER BY id", (repo_id,)
+        ).fetchall()
+        return [row["id"] for row in rows]
+
+    def foreign_key_violations(self) -> list[dict]:
+        return [dict(row) for row in self._conn.execute("PRAGMA foreign_key_check")]
+
     # ── Cleanup ─────────────────────────────────────────────────────────────
 
     def cleanup_failed_replacement(

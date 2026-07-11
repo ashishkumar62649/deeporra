@@ -449,6 +449,10 @@ parameters). `fcode/embeddings/__init__.py` exports `EXPECTED_DIMENSION`. No sto
 
 Step 4 added `IndexService.build_through_sqlite_fts()` with keyword-only injected SQLite and FTS dependencies. One fresh state machine runs scan through graph and then enters `STORING` before any write. On a fresh repository scope, repository/status metadata, files, parsed symbols and routes, chunks, and external-content FTS tables are written on the shared SQLite connection in one transaction. Success is intentionally nonterminal (`phase=PERSIST`, `completed_phase=GRAPH`, `persistent_replacement_started=True`). FTS queries resolve to canonical stored chunk evidence. Vector/Chroma writes, graph-store writes, coordinated replacement, old-index deletion, active promotion, `COMPLETE`, and CLI activation remain Step 5 work.
 
+### WP5 Step 5 — Complete
+
+Step 5 added `build_complete_index()` and its thin `run_index()` wrapper. The complete in-memory attempt enters `STORING`, writes SQLite/FTS, local Chroma vectors, and graph rows to an isolated `.fcode/generations/<generation>` directory, verifies the reopened stores, marks the staged status `complete`, and atomically promotes `.fcode/active.json`. The prior active generation remains usable until promotion verification succeeds; failed stages and stale managed staging markers are removed safely. Full rebuild only is supported. Incremental indexing, source edits, hosted services, CLI activation, Step 6 command exposure, and Step 7 final acceptance remain deferred.
+
 ### Remaining WP5 Steps
 
 **Agent Name:** Integration Agent

@@ -1,6 +1,7 @@
 """F Code indexing — state machine and pipeline orchestration."""
 
 from fcode.indexing.index_service import IndexService
+from fcode.indexing.full_rebuild import FullRebuildCoordinator
 from fcode.indexing.state_machine import (
     IndexStateMachine,
     InvalidIndexStateTransition,
@@ -8,6 +9,7 @@ from fcode.indexing.state_machine import (
 
 __all__ = [
     "IndexService",
+    "FullRebuildCoordinator",
     "IndexStateMachine",
     "InvalidIndexStateTransition",
 ]

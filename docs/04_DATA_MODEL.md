@@ -475,6 +475,8 @@ FTS5 rebuild occurs after the SQLite content transaction commits, using the comp
 
 For the WP5 Step 4 fresh-scope staging API, SQLite metadata, external-content FTS rebuild, the nonterminal `storing` status, and their verification counts use one connection and one transaction. Any Step 4 write failure rolls back the new repository scope. The post-commit rebuild described above remains the Step 5 coordinated full-replacement contract.
 
+WP5 Step 5 stores each complete rebuild under `.fcode/generations/<generation>/` with its SQLite database, FTS tables, and local Chroma directory together. A `.fcode/staging/<generation>.json` marker identifies an inactive build while it is being written. Only a verified generation with `index_status.status = 'complete'` may be named by the atomically replaced `.fcode/active.json` pointer. The prior generation is retained until the new active generation is reopened and verified; failed stages never become active.
+
 ### FTS5 Row-Count Verification
 
 FTS5 row-count verification occurs before status becomes `complete`:
