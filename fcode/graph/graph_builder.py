@@ -28,6 +28,8 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
     symbol_by_id: dict[str, ParsedSymbol] = {}
     symbol_by_name: dict[str, list[ParsedSymbol]] = {}
     node_id_for_sym_id: dict[str, str] = {}
+    seen_node_ids: set[str] = set()
+    seen_canonical_edges: set[tuple[str, str, str]] = set()
 
     for pf in parsed_files:
         file_node_id = f"file:{pf.file_path}"
@@ -54,6 +56,7 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
             symbol_by_id[node_id] = sym
             symbol_by_name.setdefault(sym.name, []).append(sym)
             node_id_for_sym_id[sym.symbol_id or node_id] = node_id
+            seen_node_ids.add(node_id)
 
             nodes.append(
                 GraphNodeInput(
@@ -94,7 +97,11 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
                     )
 
         for imp in pf.imports:
-            import_node_id = f"import:{pf.file_path}:{imp.module_name}:{imp.line_number}"
+            identity = imp.imported_names[0] if imp.imported_names else imp.module_name
+            import_node_id = f"import:{pf.file_path}:{imp.module_name}:{identity}:{imp.line_number}"
+            if import_node_id in seen_node_ids:
+                continue
+            seen_node_ids.add(import_node_id)
             nodes.append(
                 GraphNodeInput(
                     record_id=str(uuid.uuid4()),
@@ -112,38 +119,42 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
                     },
                 )
             )
-            edges.append(
-                GraphEdgeInput(
-                    record_id=str(uuid.uuid4()),
-                    source_node_id=file_node_id,
-                    target_node_id=import_node_id,
-                    relation=GraphRelation.IMPORTS,
-                    source_file=pf.file_path,
-                    source_location=f"{pf.file_path}:{imp.line_number}",
-                    confidence=Confidence.EXTRACTED,
-                    metadata={
-                        "module_name": imp.module_name,
-                        "imported_names": imp.imported_names,
-                        "alias": imp.alias,
-                        "line_number": imp.line_number,
-                    },
+            edge_triple = (file_node_id, import_node_id, GraphRelation.IMPORTS.value)
+            if edge_triple not in seen_canonical_edges:
+                seen_canonical_edges.add(edge_triple)
+                edges.append(
+                    GraphEdgeInput(
+                        record_id=str(uuid.uuid4()),
+                        source_node_id=file_node_id,
+                        target_node_id=import_node_id,
+                        relation=GraphRelation.IMPORTS,
+                        source_file=pf.file_path,
+                        source_location=f"{pf.file_path}:{imp.line_number}",
+                        confidence=Confidence.EXTRACTED,
+                        metadata={
+                            "module_name": imp.module_name,
+                            "imported_names": imp.imported_names,
+                            "alias": imp.alias,
+                            "line_number": imp.line_number,
+                        },
+                    )
                 )
-            )
 
         for route in pf.routes:
             route_node_id = route.route_id
-
-            nodes.append(
-                GraphNodeInput(
-                    record_id=str(uuid.uuid4()),
-                    node_id=route_node_id,
-                    node_type=GraphNodeType.ROUTE,
-                    label=f"{route.method.value} {route.route_path}",
-                    source_file=pf.file_path,
-                    source_location=f"{pf.file_path}:{route.start_line}",
-                    confidence=route.confidence,
+            if route_node_id not in seen_node_ids:
+                seen_node_ids.add(route_node_id)
+                nodes.append(
+                    GraphNodeInput(
+                        record_id=str(uuid.uuid4()),
+                        node_id=route_node_id,
+                        node_type=GraphNodeType.ROUTE,
+                        label=f"{route.method.value} {route.route_path}",
+                        source_file=pf.file_path,
+                        source_location=f"{pf.file_path}:{route.start_line}",
+                        confidence=route.confidence,
+                    )
                 )
-            )
 
             handler_id: str | None = None
             for sym in pf.symbols:
@@ -152,28 +163,35 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
                     break
 
             if handler_id:
-                edges.append(
-                    GraphEdgeInput(
-                        record_id=str(uuid.uuid4()),
-                        source_node_id=handler_id,
-                        target_node_id=route_node_id,
-                        relation=GraphRelation.DEFINES,
-                        source_file=pf.file_path,
-                        source_location=f"{pf.file_path}:{route.start_line}",
-                        confidence=Confidence.EXTRACTED,
+                defines_triple = (handler_id, route_node_id, GraphRelation.DEFINES.value)
+                if defines_triple not in seen_canonical_edges:
+                    seen_canonical_edges.add(defines_triple)
+                    edges.append(
+                        GraphEdgeInput(
+                            record_id=str(uuid.uuid4()),
+                            source_node_id=handler_id,
+                            target_node_id=route_node_id,
+                            relation=GraphRelation.DEFINES,
+                            source_file=pf.file_path,
+                            source_location=f"{pf.file_path}:{route.start_line}",
+                            confidence=Confidence.EXTRACTED,
+                        )
                     )
-                )
-                edges.append(
-                    GraphEdgeInput(
-                        record_id=str(uuid.uuid4()),
-                        source_node_id=route_node_id,
-                        target_node_id=handler_id,
-                        relation=GraphRelation.HANDLES_ROUTE,
-                        source_file=pf.file_path,
-                        source_location=f"{pf.file_path}:{route.start_line}",
-                        confidence=Confidence.EXTRACTED,
+
+                hr_triple = (route_node_id, handler_id, GraphRelation.HANDLES_ROUTE.value)
+                if hr_triple not in seen_canonical_edges:
+                    seen_canonical_edges.add(hr_triple)
+                    edges.append(
+                        GraphEdgeInput(
+                            record_id=str(uuid.uuid4()),
+                            source_node_id=route_node_id,
+                            target_node_id=handler_id,
+                            relation=GraphRelation.HANDLES_ROUTE,
+                            source_file=pf.file_path,
+                            source_location=f"{pf.file_path}:{route.start_line}",
+                            confidence=Confidence.EXTRACTED,
+                        )
                     )
-                )
 
     _add_inherits_edges(edges, symbol_by_id, symbol_by_name, node_id_for_sym_id)
     _add_calls_edges(edges, symbol_by_id, symbol_by_name, node_id_for_sym_id)

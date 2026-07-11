@@ -1228,3 +1228,87 @@ class TestBuildFatal:
             chunks=[], embedding_result=emb,
         )
         assert result.embedding_result is not None
+
+
+# ── Graph builder correction acceptance ───────────────────────────────────────
+
+
+class TestCorrectedGraphAcceptance:
+    def test_multiple_imports_pass_validation(self):
+        encoder = MagicMock()
+        encoder.encode.return_value = _make_batch_result(
+            eligible=1, success=1, fail=0, skipped=0,
+            records=[_make_valid_record()],
+        )
+        graph_builder = MagicMock()
+        n1 = GraphNodeInput(node_id="file:mod.py", node_type=GraphNodeType.FILE,
+                            source_file="mod.py")
+        n2 = GraphNodeInput(node_id="import:mod.py:os:os:1", node_type=GraphNodeType.IMPORT,
+                            source_file="mod.py")
+        n3 = GraphNodeInput(node_id="import:mod.py:json:json:2", node_type=GraphNodeType.IMPORT,
+                            source_file="mod.py")
+        graph_builder.build.return_value = GraphBuildResult(
+            nodes=[n1, n2, n3], edges=[
+                GraphEdgeInput(source_node_id="file:mod.py", target_node_id="import:mod.py:os:os:1",
+                                relation=GraphRelation.IMPORTS),
+                GraphEdgeInput(source_node_id="file:mod.py", target_node_id="import:mod.py:json:json:2",
+                                relation=GraphRelation.IMPORTS),
+            ],
+            node_count=3, edge_count=2,
+        )
+        svc = _make_default_service(encoder=encoder, graph_builder=graph_builder)
+        result = svc.build_through_graphing(FCodeConfig(repo_path="."))
+        assert result.run_result.state == IndexState.GRAPHING
+
+    def test_multiple_routes_pass_validation(self):
+        encoder = MagicMock()
+        encoder.encode.return_value = _make_batch_result(
+            eligible=1, success=1, fail=0, skipped=0,
+            records=[_make_valid_record()],
+        )
+        graph_builder = MagicMock()
+        n1 = GraphNodeInput(node_id="file:routes.py", node_type=GraphNodeType.FILE,
+                            source_file="routes.py")
+        n2 = GraphNodeInput(node_id="route:GET:/items:routes.py:1", node_type=GraphNodeType.ROUTE,
+                            source_file="routes.py")
+        n3 = GraphNodeInput(node_id="route:POST:/items:routes.py:2", node_type=GraphNodeType.ROUTE,
+                            source_file="routes.py")
+        graph_builder.build.return_value = GraphBuildResult(
+            nodes=[n1, n2, n3], edges=[],
+            node_count=3, edge_count=0,
+        )
+        svc = _make_default_service(encoder=encoder, graph_builder=graph_builder)
+        result = svc.build_through_graphing(FCodeConfig(repo_path="."))
+        assert result.run_result.state == IndexState.GRAPHING
+
+    def test_rejects_genuinely_invalid_duplicate_nodes(self):
+        encoder = MagicMock()
+        encoder.encode.return_value = _make_batch_result(
+            eligible=1, success=1, fail=0, skipped=0,
+            records=[_make_valid_record()],
+        )
+        graph_builder = MagicMock()
+        n1 = GraphNodeInput(node_id="n1", node_type=GraphNodeType.FILE,
+                            source_file="mod.py")
+        n2 = GraphNodeInput(node_id="n1", node_type=GraphNodeType.FILE,
+                            source_file="mod.py")
+        graph_builder.build.return_value = GraphBuildResult(
+            nodes=[n1, n2], edges=[], node_count=2, edge_count=0,
+        )
+        svc = _make_default_service(encoder=encoder, graph_builder=graph_builder)
+        result = svc.build_through_graphing(FCodeConfig(repo_path="."))
+        assert result.run_result.state == IndexState.ERROR
+
+    def test_embedding_result_retained_on_graph_failure(self):
+        encoder = MagicMock()
+        encoder.encode.return_value = _make_batch_result(
+            eligible=1, success=1, fail=0, skipped=0,
+            records=[_make_valid_record()],
+        )
+        graph_builder = MagicMock()
+        graph_builder.build.side_effect = RuntimeError("graph fail")
+        svc = _make_default_service(encoder=encoder, graph_builder=graph_builder)
+        result = svc.build_through_graphing(FCodeConfig(repo_path="."))
+        assert result.run_result.state == IndexState.ERROR
+        assert result.embedding_result is not None
+        assert result.graph_result is None

@@ -37,10 +37,11 @@ def _imp(module: str, names: list[str] | None = None, **kw) -> ParsedImport:
 def _route(path: str, fn: str, **kw) -> ParsedRoute:
     kw.setdefault("route_id", f"route:{path}")
     kw.setdefault("start_line", 1)
+    kw.setdefault("method", HttpMethod.GET)
     return ParsedRoute(
         route_path=f"/{path}",
         handler_function=fn,
-        method=HttpMethod.GET,
+        method=kw.pop("method"),
         confidence=Confidence.EXTRACTED,
         **kw,
     )
@@ -245,3 +246,168 @@ def test_variable_no_graph_node():
     result = build([pf])
     non_file_nodes = [n for n in result.nodes if n.node_type != GraphNodeType.FILE]
     assert len(non_file_nodes) == 0
+
+
+# ── Import duplicate-ID defects ──────────────────────────────────────────────
+
+
+def test_two_imports_same_module_same_line():
+    pf = _pf("mod.py")
+    pf.imports.append(_imp("package.module", names=["Alpha"], line_number=10))
+    pf.imports.append(_imp("package.module", names=["Beta"], line_number=10))
+    result = build([pf])
+    import_nodes = [n for n in result.nodes if n.node_type == GraphNodeType.IMPORT]
+    assert len(import_nodes) == 2
+    node_ids = [n.node_id for n in import_nodes]
+    assert len(set(node_ids)) == len(node_ids)
+    alpha_nodes = [n for n in import_nodes if "Alpha" in n.node_id]
+    beta_nodes = [n for n in import_nodes if "Beta" in n.node_id]
+    assert len(alpha_nodes) == 1
+    assert len(beta_nodes) == 1
+
+
+def test_imports_with_different_aliases():
+    pf = _pf("mod.py")
+    pf.imports.append(_imp("os", names=["os"], alias="operating_system", line_number=1))
+    pf.imports.append(_imp("shutil", names=["shutil"], alias=None, line_number=2))
+    result = build([pf])
+    import_nodes = [n for n in result.nodes if n.node_type == GraphNodeType.IMPORT]
+    assert len(import_nodes) == 2
+    os_nodes = [n for n in import_nodes if "os" in n.node_id]
+    shutil_nodes = [n for n in import_nodes if "shutil" in n.node_id]
+    assert len(os_nodes) == 1
+    assert len(shutil_nodes) == 1
+    assert os_nodes[0].node_id != shutil_nodes[0].node_id
+
+
+def test_exact_duplicate_import_records():
+    pf = _pf("mod.py")
+    pf.imports.append(_imp("os", names=["os"], line_number=1))
+    pf.imports.append(_imp("os", names=["os"], line_number=1))
+    result = build([pf])
+    import_nodes = [n for n in result.nodes if n.node_type == GraphNodeType.IMPORT]
+    assert len(import_nodes) == 1
+    import_edges = [e for e in result.edges if e.relation == GraphRelation.IMPORTS]
+    assert len(import_edges) == 1
+
+
+def test_repeated_import_build_determinism():
+    pf = _pf("mod.py")
+    pf.imports.append(_imp("package.module", names=["Alpha"], line_number=5))
+    pf.imports.append(_imp("package.module", names=["Beta"], line_number=5))
+    r1 = build([pf])
+    r2 = build([pf])
+    nids1 = [n.node_id for n in r1.nodes if n.node_type == GraphNodeType.IMPORT]
+    nids2 = [n.node_id for n in r2.nodes if n.node_type == GraphNodeType.IMPORT]
+    assert nids1 == nids2
+
+
+# ── Route duplicate-ID defects ───────────────────────────────────────────────
+
+
+def test_duplicate_route_records_deduplicated():
+    pf = _pf("routes.py")
+    rid = "route:GET:/users:mod.py:1"
+    pf.routes.append(_route("users", "list_users", route_id=rid))
+    pf.routes.append(_route("users", "list_users", route_id=rid))
+    pf.symbols.append(_sym("list_users", SymbolType.FUNCTION))
+    result = build([pf])
+    route_nodes = [n for n in result.nodes if n.node_type == GraphNodeType.ROUTE]
+    assert len(route_nodes) == 1
+
+
+def test_same_path_different_methods():
+    pf = _pf("routes.py")
+    rid1 = "route:GET:/items:routes.py:1"
+    rid2 = "route:POST:/items:routes.py:2"
+    pf.routes.append(_route("items", "get_items", route_id=rid1))
+    pf.routes.append(_route("items", "post_items", route_id=rid2, method=HttpMethod.POST))
+    pf.symbols.append(_sym("get_items", SymbolType.FUNCTION))
+    pf.symbols.append(_sym("post_items", SymbolType.FUNCTION))
+    result = build([pf])
+    route_nodes = [n for n in result.nodes if n.node_type == GraphNodeType.ROUTE]
+    assert len(route_nodes) == 2
+    node_ids = [n.node_id for n in route_nodes]
+    assert len(set(node_ids)) == len(node_ids)
+
+
+def test_different_paths_same_handler():
+    pf = _pf("routes.py")
+    rid1 = "route:GET:/users:routes.py:1"
+    rid2 = "route:GET:/admins:routes.py:2"
+    pf.routes.append(_route("users", "list_users", route_id=rid1))
+    pf.routes.append(_route("admins", "list_users", route_id=rid2))
+    pf.symbols.append(_sym("list_users", SymbolType.FUNCTION, symbol_id="sym:list_users"))
+    result = build([pf])
+    route_nodes = [n for n in result.nodes if n.node_type == GraphNodeType.ROUTE]
+    assert len(route_nodes) == 2
+    hr_edges = [e for e in result.edges if e.relation == GraphRelation.HANDLES_ROUTE]
+    assert len(hr_edges) == 2
+
+
+def test_exact_duplicate_route_edges_deduplicated():
+    pf = _pf("routes.py")
+    rid = "route:GET:/items:routes.py:1"
+    route1 = _route("items", "get_items", route_id=rid, start_line=1)
+    route2 = _route("items", "get_items", route_id=rid, start_line=1)
+    pf.routes.extend([route1, route2])
+    pf.symbols.append(_sym("get_items", SymbolType.FUNCTION, symbol_id="sym:get_items"))
+    result = build([pf])
+    hr_edges = [e for e in result.edges if e.relation == GraphRelation.HANDLES_ROUTE]
+    assert len(hr_edges) == 1
+    defines_edges = [e for e in result.edges if e.relation == GraphRelation.DEFINES
+                     and e.target_node_id == rid]
+    assert len(defines_edges) == 1
+
+
+def test_repeated_route_build_determinism():
+    pf = _pf("routes.py")
+    pf.routes.append(_route("x", "handler_x", route_id="route:GET:/x:routes.py:1"))
+    pf.routes.append(_route("y", "handler_y", route_id="route:GET:/y:routes.py:2"))
+    pf.symbols.append(_sym("handler_x", SymbolType.FUNCTION))
+    pf.symbols.append(_sym("handler_y", SymbolType.FUNCTION))
+    r1 = build([pf])
+    r2 = build([pf])
+    nids1 = [n.node_id for n in r1.nodes if n.node_type == GraphNodeType.ROUTE]
+    nids2 = [n.node_id for n in r2.nodes if n.node_type == GraphNodeType.ROUTE]
+    assert nids1 == nids2
+
+
+# ── Global invariants ────────────────────────────────────────────────────────
+
+
+def test_all_graph_node_ids_unique():
+    pf1 = _pf("mod1.py")
+    pf1.symbols.append(_sym("foo", SymbolType.FUNCTION))
+    pf1.symbols.append(_sym("bar", SymbolType.FUNCTION))
+    pf1.imports.append(_imp("os", line_number=1))
+    pf1.imports.append(_imp("json", line_number=2))
+    pf2 = _pf("mod2.py")
+    pf2.symbols.append(_sym("baz", SymbolType.FUNCTION))
+    pf2.imports.append(_imp("re", line_number=1))
+    result = build([pf1, pf2])
+    node_ids = [n.node_id for n in result.nodes]
+    assert len(set(node_ids)) == len(node_ids)
+
+
+def test_all_canonical_edges_unique():
+    pf1 = _pf("mod1.py")
+    pf1.symbols.append(_sym("foo", SymbolType.FUNCTION))
+    pf1.imports.append(_imp("os", line_number=1))
+    pf2 = _pf("mod2.py")
+    pf2.symbols.append(_sym("bar", SymbolType.FUNCTION))
+    result = build([pf1, pf2])
+    edge_triples = [(e.source_node_id, e.target_node_id, e.relation.value)
+                    for e in result.edges]
+    assert len(set(edge_triples)) == len(edge_triples)
+
+
+def test_node_and_edge_count_matches():
+    pf1 = _pf("mod1.py")
+    pf1.symbols.append(_sym("foo", SymbolType.FUNCTION))
+    pf1.imports.append(_imp("os", line_number=1))
+    pf2 = _pf("mod2.py")
+    pf2.symbols.append(_sym("bar", SymbolType.FUNCTION))
+    result = build([pf1, pf2])
+    assert result.node_count == len(result.nodes)
+    assert result.edge_count == len(result.edges)
