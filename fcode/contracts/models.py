@@ -247,21 +247,94 @@ class IndexCounts:
     graph_edges: int = 0
     chunks: int = 0
     embedded: int = 0
+    parse_errors: int = 0
+    symbols: int = 0
+    embedding_eligible: int = 0
+    embedding_skipped: int = 0
+    embedding_failed: int = 0
+    warnings: int = 0
+    errors: int = 0
 
-
-@dataclass
-class IndexRunResult:
-    state: IndexState
-    phase: IndexPhase
-    counts: IndexCounts = field(default_factory=IndexCounts)
-    errors: list[str] = field(default_factory=list)
+    def validate(self) -> None:
+        for field_name, field_value in self.__dataclass_fields__.items():
+            val = getattr(self, field_name)
+            if not isinstance(val, int):
+                raise ValueError(f"{field_name}: must be an integer, got {type(val).__name__}")
+            if isinstance(val, bool):
+                raise ValueError(f"{field_name}: must be an integer, got bool")
+            if val < 0:
+                raise ValueError(f"{field_name}: must be non-negative, got {val}")
 
 
 @dataclass
 class IndexDiagnostic:
-    phase: IndexPhase
+    code: str
     message: str
+    phase: Optional[IndexPhase] = None
+    recoverable: bool = True
     severity: DiagnosticSeverity = DiagnosticSeverity.WARNING
+    repo_relative_path: Optional[str] = None
+    details: Optional[str] = None
+
+    def validate(self) -> None:
+        if not self.code:
+            raise ValueError("code: must be a non-empty string")
+        if not self.message:
+            raise ValueError("message: must be a non-empty string")
+        if len(self.message) > 500:
+            raise ValueError("message: must be at most 500 characters")
+        if self.severity == DiagnosticSeverity.WARNING and not self.recoverable:
+            raise ValueError("warning diagnostics must be recoverable")
+        if self.severity == DiagnosticSeverity.ERROR and self.recoverable:
+            raise ValueError("error diagnostics must not be recoverable")
+        if self.repo_relative_path is not None:
+            if self.repo_relative_path.startswith("/") or self.repo_relative_path.startswith("\\"):
+                raise ValueError("repo_relative_path: must not be absolute")
+            if ".." in self.repo_relative_path.split("/"):
+                raise ValueError("repo_relative_path: must not contain '..' traversal")
+            if "\\" in self.repo_relative_path:
+                raise ValueError("repo_relative_path: must use forward-slash separators")
+
+
+@dataclass
+class IndexRunResult:
+    state: IndexState = IndexState.PENDING
+    phase: Optional[IndexPhase] = None
+    counts: IndexCounts = field(default_factory=IndexCounts)
+    diagnostics: list[IndexDiagnostic] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+
+    def validate(self) -> None:
+        self.counts.validate()
+        for d in self.diagnostics:
+            d.validate()
+        for e in self.errors:
+            if not isinstance(e, str):
+                raise ValueError(f"errors entry must be a string, got {type(e).__name__}")
+            if len(e) > 500:
+                raise ValueError("errors entry must be at most 500 characters")
+        fatal_diagnostics = [d for d in self.diagnostics if d.severity == DiagnosticSeverity.ERROR and not d.recoverable]
+        if self.state == IndexState.COMPLETE:
+            if fatal_diagnostics:
+                raise ValueError("COMPLETE state must not contain fatal diagnostics")
+        if self.state == IndexState.ERROR:
+            if not fatal_diagnostics and not self.errors:
+                raise ValueError("ERROR state must contain at least one fatal diagnostic or error string")
+        state_phase_map = {
+            IndexState.PENDING: None,
+            IndexState.SCANNING: IndexPhase.SCAN,
+            IndexState.PARSING: IndexPhase.PARSE,
+            IndexState.CHUNKING: IndexPhase.CHUNK,
+            IndexState.EMBEDDING: IndexPhase.EMBED,
+            IndexState.GRAPHING: IndexPhase.GRAPH,
+            IndexState.STORING: IndexPhase.PERSIST,
+            IndexState.COMPLETE: IndexPhase.PERSIST,
+        }
+        expected = state_phase_map.get(self.state)
+        if expected is None and self.phase is not None:
+            raise ValueError(f"{self.state.value} state must use phase=None")
+        if expected is not None and self.phase != expected:
+            raise ValueError(f"{self.state.value} state must use phase={expected.value}")
 
 
 @dataclass

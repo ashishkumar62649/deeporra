@@ -422,7 +422,15 @@ that every feature module depends on. Eliminate duplicate definitions across mod
 
 ---
 
-## 11. Work Package 5: Integration
+## 11. Work Package 5: Integration (7 steps)
+
+### WP5 Step 1 — Complete
+
+Step 1 established indexing contracts (`IndexCounts`, `IndexDiagnostic`, `IndexRunResult` with validation),
+the pure `IndexStateMachine` (no I/O), and updated documentation. The indexing pipeline is not yet
+implemented. See WP5 Step 1 report for full details.
+
+### Remaining WP5 Steps
 
 **Agent Name:** Integration Agent
 
@@ -455,7 +463,15 @@ that every feature module depends on. Eliminate duplicate definitions across mod
 
 **Expected Outputs:**
 - `fcode/indexing/__init__.py`
-- `fcode/indexing/index_service.py` — pipeline orchestrator
+- `fcode/indexing/state_machine.py` — pure state controller (no I/O)
+- `fcode/indexing/index_service.py` — pipeline orchestrator (later WP5 steps)
+
+**`state_machine.py` contract:**
+- `IndexStateMachine` — deterministic state machine with legal forward transitions and ERROR from every non-terminal state
+- `InvalidIndexStateTransition` — exception for illegal transitions
+- No I/O, no feature-module imports, no filesystem access
+- Tracks: state, phase, completed_phase, history (immutable tuple), terminal flag, persistent_replacement_started flag
+- Phase A: PENDING; Phase B: SCANNING through GRAPHING; Phase C begins at STORING
 
 **`index_service.py` contract:**
 - Orchestrates services only; contains no parser/storage/chunking algorithms
@@ -469,6 +485,14 @@ that every feature module depends on. Eliminate duplicate definitions across mod
 - Storage modules do not call each other
 
 **Required Tests:** Cross-module integration tests owned by Tests Agent (WP6). Integration Agent verifies unit tests pass.
+
+**WP5 Step 1 specific tests (owned by Integration Agent):**
+- `tests/unit/test_index_state_machine.py` — 64 tests covering initial state, happy path, failure transitions, illegal transitions, public methods, and exception behavior
+
+**WP5 Step 1 contract changes:**
+- `IndexCounts` — appended parse_errors, symbols, embedding_eligible, embedding_skipped, embedding_failed, warnings, errors; added `validate()`
+- `IndexDiagnostic` — added code, recoverable, repo_relative_path, details fields; phase made optional; added `validate()`
+- `IndexRunResult` — state defaults to PENDING; phase defaults to None; added diagnostics list; added `validate()`
 
 **Documentation Updates:**
 - Update any doc if contracts changed during integration

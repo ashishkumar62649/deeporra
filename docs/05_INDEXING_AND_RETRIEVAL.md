@@ -8,6 +8,71 @@ Indexing is the process of scanning a repository, parsing code, creating chunks,
 repo_path → scan → parse → chunk → embed → graph → store → .fcode/
 ```
 
+## 1a. Indexing State Machine
+
+The indexing pipeline is governed by a pure state machine in `fcode/indexing/state_machine.py`.
+It performs no I/O and knows nothing about the repository path.
+
+### State progression
+
+```
+pending
+→ scanning
+→ parsing
+→ chunking
+→ embedding
+→ graphing
+→ storing
+→ complete
+```
+
+Error is allowed from every non-terminal state.
+
+### Phase mapping
+
+| State | phase (active) |
+|---|---|
+| PENDING | None |
+| SCANNING | SCAN |
+| PARSING | PARSE |
+| CHUNKING | CHUNK |
+| EMBEDDING | EMBED |
+| GRAPHING | GRAPH |
+| STORING | PERSIST |
+| COMPLETE | PERSIST |
+
+### Completed-phase mapping
+
+| Current state | completed_phase |
+|---|---|
+| PENDING | None |
+| SCANNING | None |
+| PARSING | SCAN |
+| CHUNKING | PARSE |
+| EMBEDDING | CHUNK |
+| GRAPHING | EMBED |
+| STORING | GRAPH |
+| COMPLETE | PERSIST |
+
+When transitioning to ERROR, the last completed phase and last active phase are preserved.
+
+### Phase A / B / C boundaries
+
+- **Phase A (preflight):** PENDING
+- **Phase B (in-memory build):** SCANNING through GRAPHING
+- **Phase C (persistent replacement):** STORING, COMPLETE; ERROR after STORING began
+
+The `persistent_replacement_started` flag is `False` for PENDING through GRAPHING,
+becomes `True` when STORING begins, and stays `True` through COMPLETE and
+ERROR-from-STORING. This flag distinguishes failures before and after
+destructive replacement began.
+
+### State-machine purity
+
+`state_machine.py` imports only `fcode.contracts.enums` and standard-library typing helpers.
+It does not import scanner, parser, chunker, embeddings, graph, storage, SQLite, Chroma,
+CLI, config, network, subprocess, or filesystem modules.
+
 **Data flow contracts:** See `03_SYSTEM_ARCHITECTURE.md` Section 16 for the exact data structures passed between pipeline components (`RepoInput`, `ScannedFile`, `ParsedFile`, `CodeChunk`, `EmbeddingInput`, `EmbeddingRecord`, `GraphNodeInput`, `GraphEdgeInput`).
 
 ## 2. Repository Intake

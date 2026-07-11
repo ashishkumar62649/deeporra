@@ -715,6 +715,61 @@ If Chroma writing, FTS population, verification, or final status update fails af
 
 **The previous index is NOT restored after Phase C has begun.** This limitation is explicit. The destructive replacement in Phase C step 5 is irreversible.
 
-## 26. Config File Schema
+## 26. In-Memory Indexing Contracts
+
+These contracts are used for in-process indexing communication (not persisted to SQLite):
+
+### IndexCounts
+
+| Field | Meaning |
+|---|---|
+| scanned | Eligible scanner records produced |
+| parsed | Python files successfully parsed |
+| graph_nodes | Graph nodes produced |
+| graph_edges | Graph edges produced |
+| chunks | Code/document/config chunks produced |
+| embedded | Successful embedding records produced |
+| parse_errors | Python files with parse status ERROR |
+| symbols | Parsed symbols produced |
+| embedding_eligible | Inputs eligible for embedding |
+| embedding_skipped | Inputs intentionally skipped |
+| embedding_failed | Eligible inputs that failed |
+| warnings | Recoverable indexing diagnostics |
+| errors | Fatal indexing diagnostics |
+
+All defaults are zero. `validate()` raises `ValueError` on non-integer, boolean, or negative values.
+
+### IndexDiagnostic
+
+Structured warning or error produced during indexing.
+
+| Field | Type | Meaning |
+|---|---|---|
+| code | str | Non-empty diagnostic code from the error catalog |
+| message | str | Non-empty sanitized message (max 500 chars) |
+| phase | Optional[IndexPhase] | Active phase when produced; None during preflight |
+| recoverable | bool | Warning = True, Error = False |
+| severity | DiagnosticSeverity | `warning` or `error` |
+| repo_relative_path | Optional[str] | Repo-relative path (forward slashes, no `..`, no absolute) |
+| details | Optional[str] | Optional sanitized context |
+
+`validate()` enforces severity/recoverable consistency, path rules, and length limits.
+
+### IndexRunResult
+
+In-memory result of a single indexing attempt.
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| state | IndexState | PENDING | Final/current attempt state |
+| phase | Optional[IndexPhase] | None | Active or last active phase |
+| counts | IndexCounts | IndexCounts() | In-memory attempt counters |
+| diagnostics | list[IndexDiagnostic] | [] | Structured warnings and errors |
+| errors | list[str] | [] | Backward-compatible sanitized error strings |
+
+`validate()` confirms: count validity, diagnostic validity, state/phase mapping,
+COMPLETE has no fatal diagnostics, ERROR has fatal diagnostics or error strings.
+
+## 27. Config File Schema
 
 See `03_SYSTEM_ARCHITECTURE.md` Section 21 for the full `.fcode/config.json` schema definition. The config file stores index configuration, embedding model settings, storage paths, and privacy settings.

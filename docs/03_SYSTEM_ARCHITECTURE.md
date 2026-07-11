@@ -289,6 +289,10 @@ Return: ranked evidence with file paths, symbols, line ranges
 
 ## 14. Module Boundaries
 
+`fcode/indexing/` contains:
+- `state_machine.py` — a pure state controller that performs no I/O, imports no feature modules, and knows nothing about the repository path. It tracks indexing state, active phase, completed phase, history, and the Phase-C persistent-replacement flag.
+- `index_service.py` — the pipeline orchestrator (belongs to later WP5 steps; not yet implemented).
+
 `fcode/indexing/index_service.py` is owned by the Integration Agent. It is the only module that controls:
 - Phase order
 - Phase progress
@@ -316,7 +320,7 @@ Return: ranked evidence with file paths, symbols, line ranges
 | `fcode/contracts/` | Shared enums, models, errors, interfaces (WP0) | None |
 | `fcode/cli/` | CLI entry point, argument parsing | contracts + All services |
 | `fcode/config/` | Configuration management | None |
-| `fcode/indexing/` | Pipeline orchestration (Phase A, B, C) | All index services |
+| `fcode/indexing/` | Pipeline orchestration (Phase A, B, C) and pure state machine | All index services |
 | `fcode/scanner/` | File discovery, ignore rules, secret detection | None |
 | `fcode/parser/` | Python AST extraction | None |
 | `fcode/chunking/` | Semantic chunk creation from safe scanner content and parser structure | scanner + parser output |
@@ -386,7 +390,8 @@ fcode/
 │   └── evidence.py         # evidence formatting
 ├── indexing/
 │   ├── __init__.py
-│   └── index_service.py    # pipeline orchestrator (Phase A, B, C)
+│   ├── state_machine.py    # pure state controller (no I/O)
+│   └── index_service.py    # pipeline orchestrator (Phase A, B, C) — later WP5 steps
 ├── graph/
 │   ├── __init__.py
 │   ├── graph_builder.py    # extract nodes/edges from AST
