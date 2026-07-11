@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from fcode.chunking import Chunker
+from fcode.config.settings import CONFIG_FILE_NAME, load_config
 from fcode.contracts import FCodeConfig
 from fcode.embeddings import EmbeddingEncoder
 from fcode.graph.graph_builder import build
@@ -31,6 +32,8 @@ def resolve_config(repo_path: str) -> FCodeConfig:
     path = Path(repo_path).resolve()
     if not path.is_dir():
         raise ValueError("Repository path is unavailable.")
+    if (path / CONFIG_FILE_NAME).is_file():
+        return load_config(str(path))
     return FCodeConfig(repo_path=str(path))
 
 
