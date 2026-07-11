@@ -812,11 +812,17 @@ class TestDeterminismAndSafety:
         enc = EmbeddingEncoder()
         enc.encode([_input("c1")])
 
-    def test_encoder_does_not_access_storage(self):
+    def test_encoder_does_not_access_storage(self, monkeypatch):
         import inspect
         source = inspect.getsource(EmbeddingEncoder.encode) + inspect.getsource(EmbeddingEncoder._load_model)
         assert "chromadb" not in source
         assert "sqlite3" not in source
+        before = {k for k in sys.modules if "chromadb" in k or "sqlite3" in k or "fcode.storage" in k}
+        _inject_st(monkeypatch)
+        enc = EmbeddingEncoder()
+        enc.encode([_input("c1")])
+        after = {k for k in sys.modules if "chromadb" in k or "sqlite3" in k or "fcode.storage" in k}
+        assert after == before
 
     def test_encoder_does_not_access_network(self, monkeypatch):
         _inject_st(monkeypatch)
