@@ -1,4 +1,4 @@
-"""fcode status [repo_path] — placeholder until WP1."""
+"""fcode status [repo_path] — show one active local index snapshot."""
 
 from typing import Optional
 

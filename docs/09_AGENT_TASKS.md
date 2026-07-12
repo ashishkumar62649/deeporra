@@ -465,7 +465,11 @@ Step 7 performed the final WP5 acceptance, comprehensive branch audit, targeted 
 
 All seven WP5 steps are complete. The indexing pipeline provides state machine control, repository validation, scanning, parsing, chunking, embedding, graph construction, SQLite/FTS5 persistence, Chroma persistence, graph persistence, isolated staged generations, cross-store verification, safe active-generation promotion, previous-active preservation on failure, and working `fcode index` and `fcode status` CLI commands.
 
-### Next Work Package: WP6
+### WP6 — Acceptance and Release Readiness
+
+WP6 is acceptance and release-readiness work for the completed WP5 indexing slice: run the acceptance matrix, verify operational behavior and documentation truth, and record release evidence. It does not reimplement WP5 indexing, persistence, promotion, or CLI activation. MCP, dashboard, and retrieval implementation remain deferred beyond WP6.
+
+### Historical WP5 Planning Record (superseded)
 
 **Required Docs:**
 - `AGENTS.md` (Sections 1-22)
@@ -557,7 +561,7 @@ All seven WP5 steps are complete. The indexing pipeline provides state machine c
 
 ---
 
-## 12. Work Package 6: First-Slice Tests
+## 12. Historical First-Slice Test Plan (superseded)
 
 **Agent Name:** Tests Agent
 

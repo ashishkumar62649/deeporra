@@ -35,11 +35,7 @@ def configure_app(
     index_service: Optional[IndexServiceProtocol] = None,
     status_service: Optional[StatusServiceProtocol] = None,
 ) -> None:
-    """WP5 composition point: wire service implementations before CLI startup.
-
-    Called by __main__.py before app().
-    Current slice: no services wired. WP5 replaces the call with real services.
-    """
+    """Optionally inject services for in-process CLI tests."""
     if index_service is not None:
         from fcode.cli.commands.index_cmd import set_index_service
 

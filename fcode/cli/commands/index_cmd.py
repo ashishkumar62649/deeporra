@@ -1,4 +1,4 @@
-"""fcode index <repo_path> — placeholder until WP5."""
+"""fcode index <repo_path> — build and promote one local index generation."""
 
 from typing import Optional
 

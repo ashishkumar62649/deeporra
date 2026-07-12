@@ -71,9 +71,9 @@ F Code solves this by giving agents a local intelligence layer that answers "doe
 
 ## 7. Current Build Scope
 
+MCP, dashboard, and retrieval user workflows are deferred in the current build.
+
 - Python CLI package (`fcode`)
-- Local Streamlit dashboard (localhost only)
-- Local MCP stdio server (read-only/planning-only)
 - SQLite for metadata, graph, and keyword search
 - Chroma local persistent vector store
 - Sentence Transformers local embeddings
@@ -161,7 +161,7 @@ All storage is local:
 - Generated reports in `.fcode/reports/` directory
 - No cloud database, no remote storage
 
-## 18. Retrieval Direction
+## 18. Deferred Retrieval Direction
 
 Hybrid retrieval combining:
 1. Semantic vector search (Chroma + Sentence Transformers)
@@ -181,7 +181,7 @@ Lightweight native graph layer:
 - In-memory traversal allowed only in tests and debugging utilities
 - No NetworkX dependency in current build (optional later)
 
-## 20. MCP Direction
+## 20. Deferred MCP Direction
 
 MCP tools are read-only and planning-only:
 - `search_code` — semantic + keyword search
@@ -193,7 +193,7 @@ MCP tools are read-only and planning-only:
 - `find_related_tests` — test discovery
 - `explain_change_impact` — impact analysis
 
-## 21. Dashboard Direction
+## 21. Deferred Dashboard Direction
 
 Five pages:
 1. Connect Repository — upload ZIP or enter GitHub URL

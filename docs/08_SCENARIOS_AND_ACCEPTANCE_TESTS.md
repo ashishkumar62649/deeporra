@@ -38,7 +38,7 @@ A golden test repository must exist with:
 
 This repository is used for all scenarios unless otherwise noted.
 
-## 6. Human Dashboard Scenarios
+## 6. Deferred Human Dashboard Scenarios
 
 ### SC-DASH-001: Repository Wiki Display
 
@@ -105,7 +105,7 @@ This repository is used for all scenarios unless otherwise noted.
 
 ---
 
-## 7. MCP Coding Agent Scenarios
+## 7. Deferred MCP Coding Agent Scenarios
 
 ### SC-MCP-001: Check Existing Implementation (Email Validation)
 
@@ -318,7 +318,7 @@ This repository is used for all scenarios unless otherwise noted.
 
 ---
 
-## 11. Retrieval Quality Scenarios
+## 11. Deferred Retrieval Quality Scenarios
 
 ### SC-RET-001: Ambiguous Query
 

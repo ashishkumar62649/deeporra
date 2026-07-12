@@ -2,6 +2,8 @@
 
 ## 1. Architecture Summary
 
+Current runtime interfaces are `fcode index`, `fcode status`, and `fcode doctor`. MCP, dashboard, retrieval, and setup workflows are deferred.
+
 F Code is a local-first Python CLI package with three interfaces:
 - **CLI** — primary entry point for indexing and management
 - **MCP stdio server** — read-only tools for coding agents
@@ -10,6 +12,8 @@ F Code is a local-first Python CLI package with three interfaces:
 All interfaces share the same local storage layer (SQLite + Chroma) and the same Python service modules.
 
 ## 2. Local-First Architecture
+
+Only the CLI path is active in the current build. The MCP and dashboard paths in this diagram are deferred target architecture.
 
 ```
 User's Laptop
@@ -99,7 +103,7 @@ Storage Layer
     └── .fcode/reports/ (generated reports)
 ```
 
-## 7. Retrieval Architecture
+## 7. Deferred Retrieval Architecture
 
 ```
 Retrieval Layer
@@ -127,7 +131,7 @@ Code Graph (first implementation slice)
 
 **Ownership:** `fcode/graph/graph_builder.py` is owned by the Scanner/Parser Agent. `fcode/graph/graph_traverser.py` and `fcode/graph/impact_analyzer.py` are owned by the Retrieval/Graph Agent (later phase).
 
-## 9. MCP Server Architecture
+## 9. Deferred MCP Server Architecture
 
 ```
 MCP Server (stdio transport)
@@ -148,7 +152,7 @@ MCP Server (stdio transport)
     └── tool_call_logs table
 ```
 
-## 10. Dashboard Architecture
+## 10. Deferred Dashboard Architecture
 
 ```
 Streamlit Dashboard (localhost:8501)

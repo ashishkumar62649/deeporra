@@ -2,6 +2,8 @@
 
 ## 1. Indexing Overview
 
+`fcode index` and `fcode status` are active. Retrieval/search workflows are deferred; historical Step references below do not defer those active commands.
+
 Indexing is the process of scanning a repository, parsing code, creating chunks, generating embeddings, building the code graph, and storing everything locally.
 
 ```

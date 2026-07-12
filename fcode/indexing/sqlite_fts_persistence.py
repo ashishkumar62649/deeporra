@@ -283,7 +283,7 @@ def run_step4_persistence(
     # ── Begin transaction for content writes ────────────────────────────────
     sqlite_store.begin_transaction()
     try:
-        # 2. repositories row + index_status placeholder row.
+        # 2. repositories row + initial index_status row.
         repo_id = sqlite_store.create_repository_and_status(repo_path, content_hash=content_hash)
 
         # 3. file rows.
