@@ -241,8 +241,14 @@ class FullRebuildCoordinator:
             )):
                 raise FullRebuildError("staged generation verification failed")
             fts_store = FTSStore(sqlite_store.conn)
+            expected_fts_ids = expected_chunks if status["active_search_mode"] == "fts5" else set()
             fts_ids = set(fts_store.get_chunk_ids(sqlite_store.conn, repo_id))
-            if not fts_ids.issubset(expected_chunks):
+            fts_entries = fts_store.get_chunk_index_entries(sqlite_store.conn)
+            if (
+                fts_ids != expected_fts_ids
+                or len(fts_entries) != len(expected_fts_ids)
+                or any(chunk_id is None or entry_repo_id != repo_id for chunk_id, entry_repo_id in fts_entries)
+            ):
                 raise FullRebuildError("staged generation verification failed")
 
             chroma_store.open()

@@ -106,6 +106,8 @@ def _active_evidence(repo: Path):
             "repo_id": repo_id,
             "alpha": fts.search_chunks(sqlite.conn, "alpha", repo_id),
             "beta": fts.search_chunks(sqlite.conn, "beta", repo_id),
+            "fts_ids": set(fts.get_chunk_ids(sqlite.conn, repo_id)),
+            "chunk_ids": set(sqlite.get_chunk_ids(repo_id)),
             "vectors": set((chroma.get_embeddings(repo_id).get("ids") or [])),
             "nodes": graph.get_nodes(sqlite.conn, repo_id),
             "edges": graph.get_edges(sqlite.conn, repo_id),
@@ -135,6 +137,7 @@ def test_wp5_full_rebuild_replaces_only_after_staged_verification(tmp_path, monk
     a = _active_evidence(repo)
     assert a["status"]["status"] == "complete"
     assert a["alpha"] and a["vectors"] and a["nodes"] and a["edges"]
+    assert a["fts_ids"] == a["chunk_ids"]
     assert all(len(record.vector) == EXPECTED_DIMENSION for record in first.embedding_result.records)
     assert "ghp_abcdefghijklmnopqrstuvwxyz1234567890" not in str(a)
     print("FIRST_BUILD_GENERATION=", a["generation"])
@@ -412,7 +415,7 @@ def test_process_control_preserves_active_generation_and_cleans_staging(
     assert not list((workspace / "staging").glob("generation-*.json"))
 
 
-@pytest.mark.parametrize("mismatch", ["fts_unexpected_id", "chroma_unexpected_id", "graph_unexpected_node"])
+@pytest.mark.parametrize("mismatch", ["fts_missing_id", "fts_unexpected_id", "fts_empty", "fts_unresolved", "chroma_unexpected_id", "graph_unexpected_node"])
 def test_cross_store_mismatch_is_rejected_before_promotion(tmp_path, monkeypatch, mismatch):
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -423,8 +426,15 @@ def test_cross_store_mismatch_is_rejected_before_promotion(tmp_path, monkeypatch
     assert _service().build_complete_index(FCodeConfig(repo_path=str(repo))).run_result.state == IndexState.COMPLETE
     before = _active_evidence(repo)
     _write_b(repo)
-    if mismatch == "fts_unexpected_id":
+    if mismatch == "fts_missing_id":
+        original = FTSStore.get_chunk_ids
+        monkeypatch.setattr(FTSStore, "get_chunk_ids", lambda self, *args: original(self, *args)[1:])
+    elif mismatch == "fts_unexpected_id":
         monkeypatch.setattr(FTSStore, "get_chunk_ids", lambda self, *args: ["foreign-chunk-id"])
+    elif mismatch == "fts_empty":
+        monkeypatch.setattr(FTSStore, "get_chunk_ids", lambda self, *args: [])
+    elif mismatch == "fts_unresolved":
+        monkeypatch.setattr(FTSStore, "get_chunk_index_entries", lambda self, *args: [(None, None)])
     elif mismatch == "chroma_unexpected_id":
         original = ChromaStore.get_embeddings
         def extra_vector(self, *args):
@@ -444,6 +454,24 @@ def test_cross_store_mismatch_is_rejected_before_promotion(tmp_path, monkeypatch
     assert result.run_result.state == IndexState.ERROR
     assert after["generation"] == before["generation"]
     assert after["alpha"] and not after["beta"]
+
+
+def test_zero_chunk_fts_generation_is_valid(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_module = types.ModuleType("sentence_transformers")
+    fake_module.SentenceTransformer = _FakeSentenceTransformer
+    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    result = _service().build_complete_index(FCodeConfig(repo_path=str(repo)))
+    active = _active_evidence(repo)
+    assert result.run_result.state == IndexState.COMPLETE
+    paths = FullRebuildCoordinator(str(repo)).active_paths()
+    sqlite = SQLiteStore(str(paths.database))
+    sqlite.connect()
+    try:
+        assert FTSStore(sqlite.conn).get_chunk_ids(sqlite.conn, active["repo_id"]) == []
+    finally:
+        sqlite.close()
 
 
 def test_zero_eligible_embeddings_promotes_a_valid_empty_vector_generation(tmp_path, monkeypatch):
