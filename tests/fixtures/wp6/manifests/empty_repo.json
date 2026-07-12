@@ -1,0 +1,1 @@
+{"fixture_id":"G06-empty","fixture_name":"empty_repo","purpose":"zero eligible input","files_expected_to_scan":[],"counts":{"scanned":0,"chunks":0,"embedded":0,"graph_nodes":0,"graph_edges":0},"integrity":{"files":{"placeholder":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},"aggregate":"95cdfff037d9ce42d7a502761fd52e85aa3d3634072a5d6dc142f6995cc3ba6f"}}

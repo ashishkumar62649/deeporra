@@ -1,0 +1,1 @@
+"""Space-bearing package."""

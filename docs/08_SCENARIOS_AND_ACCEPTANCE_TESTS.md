@@ -1037,3 +1037,9 @@ Before marking a scenario as passing:
 3. **Should scenarios include multi-file change scenarios?** (Recommended: yes, but simpler ones first.)
 4. **Should scenarios test error recovery (broken repos, missing files)?** (Recommended: yes, see Section 12.)
 5. **Should scenarios include performance benchmarks?** (Recommended: yes, see Section 14.)
+
+## 19. WP6.1 Golden Repositories
+
+WP6 has started with WP6.1: deterministic golden repositories, out-of-repository semantic manifests, fixture integrity digests, and the machine-readable acceptance matrix in `tests/fixtures/wp6/`. These fixtures exercise scanning through graph construction with a deterministic local model seam; no production feature, MCP workflow, dashboard, or retrieval feature is added here.
+
+WP6.2 owns CLI acceptance, WP6.3 failure and privacy scenarios, WP6.4 installation, WP6.5 performance, and WP6.6 release evidence. WP6.1 is not a release decision.

@@ -666,6 +666,10 @@ Phase 4 (after Phase 3):
 └── WP6: Tests Agent
 ```
 
+### WP6.1 â€” In Progress: Golden Repositories and Acceptance Matrix
+
+WP6.1 owns `tests/fixtures/wp6/`, `tests/support/wp6_golden.py`, and focused acceptance tests. The committed fixtures G01 through G07 have semantic manifests outside their indexed roots; G08 is generated deterministically in temporary directories. This work validates the existing in-memory pipeline only and adds no production feature. CLI acceptance, failure injection, installation, performance, and final release decisions remain with WP6.2 through WP6.6.
+
 ## 16. Review Checklist
 
 Before marking a work package as complete:
