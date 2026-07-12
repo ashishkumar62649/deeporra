@@ -86,6 +86,36 @@ class TestConstructor:
         assert svc._graph_builder is not None
 
 
+@pytest.mark.parametrize(
+    "stage",
+    ["scanner", "parser", "chunker"],
+)
+@pytest.mark.parametrize(
+    "control", [KeyboardInterrupt("scan"), SystemExit("exit"), GeneratorExit("close")],
+    ids=["keyboard_interrupt", "system_exit", "generator_exit"],
+)
+def test_process_control_exceptions_propagate_from_step2(stage, control):
+    scanner = MagicMock()
+    scanner.scan.return_value = ScanResult(
+        files=[_make_scanned(parse_status=ParseStatus.PENDING, is_binary=False)],
+        eligible_file_count=1,
+        total_count=1,
+        eligible_total_bytes=1,
+    )
+    parser = MagicMock()
+    parser.parse.return_value = ParsedFile(
+        file_id="f1", file_path="mod.py", status=ParseStatus.PARSED,
+    )
+    chunker = MagicMock()
+    chunker.chunk.return_value = []
+    {"scanner": scanner.scan, "parser": parser.parse, "chunker": chunker.chunk}[stage].side_effect = control
+
+    with pytest.raises(type(control)) as raised:
+        IndexService(scanner, parser, chunker).build_through_chunking(FCodeConfig(repo_path="."))
+
+    assert raised.value is control
+
+
 # ── validate_config ──────────────────────────────────────────────────────────
 
 

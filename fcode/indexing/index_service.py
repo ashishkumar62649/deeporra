@@ -274,7 +274,7 @@ class IndexService:
         scan_result: ScanResult
         try:
             scan_result = self._scanner.scan(repo_input, self._att_config)
-        except BaseException:
+        except Exception:
             diag = IndexDiagnostic(
                 code=ErrorCode.SCAN_FAILED.value,
                 message="File scanning failed unexpectedly.",
@@ -317,7 +317,7 @@ class IndexService:
         for sf in candidates:
             try:
                 pf = self._parser.parse(sf)
-            except BaseException:
+            except Exception:
                 diag = IndexDiagnostic(
                     code=ErrorCode.PARSE_FAILED.value,
                     message="Python parsing failed unexpectedly.",
@@ -366,7 +366,7 @@ class IndexService:
         chunks: list[CodeChunk] = []
         try:
             chunks = self._chunker.chunk(scan_result.files, parsed_files)
-        except BaseException:
+        except Exception:
             diag = IndexDiagnostic(
                 code="chunk_failed",
                 message="Semantic chunk creation failed.",
@@ -477,7 +477,7 @@ class IndexService:
         embedding_inputs: list[EmbeddingInput] = []
         try:
             embedding_inputs = build_embedding_inputs(chunks)
-        except BaseException:
+        except Exception:
             diag = IndexDiagnostic(
                 code=ErrorCode.EMBEDDING_FAILED.value,
                 message="Embedding input construction failed.",
@@ -512,7 +512,7 @@ class IndexService:
         embedding_result: EmbeddingBatchResult
         try:
             embedding_result = self._encoder.encode(embedding_inputs)
-        except BaseException as exc:
+        except Exception as exc:
             embedding_result = self._extract_partial_result(exc)
             if embedding_result is not None:
                 embed_validation = self._validate_embedding_result(
@@ -611,7 +611,7 @@ class IndexService:
         graph_result: GraphBuildResult
         try:
             graph_result = self._graph_builder.build(parsed_files)
-        except BaseException:
+        except Exception:
             diag = IndexDiagnostic(
                 code="graph_failed",
                 message="Code graph construction failed.",

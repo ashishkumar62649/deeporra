@@ -371,6 +371,47 @@ def test_run_index_uses_one_complete_pipeline_attempt(tmp_path, monkeypatch):
     assert calls["parse"] == 3
 
 
+@pytest.mark.parametrize("boundary", ["chroma", "graph", "promotion"])
+@pytest.mark.parametrize(
+    "control", [KeyboardInterrupt("stop"), SystemExit("exit"), GeneratorExit("close")],
+    ids=["keyboard_interrupt", "system_exit", "generator_exit"],
+)
+def test_process_control_preserves_active_generation_and_cleans_staging(
+    tmp_path, monkeypatch, boundary, control
+):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _write_a(repo)
+    fake_module = types.ModuleType("sentence_transformers")
+    fake_module.SentenceTransformer = _FakeSentenceTransformer
+    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    assert _service().build_complete_index(FCodeConfig(repo_path=str(repo))).run_result.state == IndexState.COMPLETE
+    before = _active_evidence(repo)
+    _write_b(repo)
+
+    def raise_control(*_args, **_kwargs):
+        raise control
+
+    if boundary == "chroma":
+        monkeypatch.setattr(ChromaStore, "upsert_embeddings", raise_control)
+    elif boundary == "graph":
+        monkeypatch.setattr(GraphStore, "store_graph", raise_control)
+    else:
+        monkeypatch.setattr(FullRebuildCoordinator, "_write_active", raise_control)
+
+    with pytest.raises(type(control)) as raised:
+        _service().build_complete_index(FCodeConfig(repo_path=str(repo)))
+    assert raised.value is control
+
+    monkeypatch.undo()
+    after = _active_evidence(repo)
+    workspace = repo / ".fcode"
+    assert after["generation"] == before["generation"]
+    assert after["alpha"] and not after["beta"]
+    assert not (workspace / "rebuild.lock").exists()
+    assert not list((workspace / "staging").glob("generation-*.json"))
+
+
 @pytest.mark.parametrize("mismatch", ["fts_unexpected_id", "chroma_unexpected_id", "graph_unexpected_node"])
 def test_cross_store_mismatch_is_rejected_before_promotion(tmp_path, monkeypatch, mismatch):
     repo = tmp_path / "repo"

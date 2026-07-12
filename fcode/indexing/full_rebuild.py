@@ -114,7 +114,7 @@ class FullRebuildCoordinator:
                     self._paths(generation_path), chunks, embedding_result, graph_result,
                     counts, require_complete=True,
                 )
-            except Exception:
+            except BaseException:
                 self._restore_active(previous)
                 raise
 
@@ -131,7 +131,7 @@ class FullRebuildCoordinator:
                 except OSError:
                     cleanup_warning = True
             return FullRebuildOutcome(cleanup_warning=cleanup_warning)
-        except Exception:
+        except BaseException:
             if marker is not None and marker.exists():
                 marker.unlink(missing_ok=True)
             if generation_path is not None and generation_path.exists():

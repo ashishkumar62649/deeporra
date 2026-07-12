@@ -773,6 +773,32 @@ class TestRealStoreReadback:
 
 
 class TestPersistenceFailures:
+    @pytest.mark.parametrize("boundary", ["sqlite", "fts"])
+    @pytest.mark.parametrize(
+        "control", [KeyboardInterrupt("stop"), SystemExit("exit"), GeneratorExit("close")],
+        ids=["keyboard_interrupt", "system_exit", "generator_exit"],
+    )
+    def test_process_control_exceptions_propagate_from_persistence(
+        self, monkeypatch, boundary, control
+    ):
+        if boundary == "sqlite":
+            monkeypatch.setattr(
+                "fcode.indexing.index_service.run_step4_persistence",
+                lambda **_kwargs: (_ for _ in ()).throw(control),
+            )
+        else:
+            fts = _FakeFTS()
+            fts.rebuild_all = MagicMock(side_effect=control)
+            service = _make_step4_svc(fts_store=fts)
+            with pytest.raises(type(control)) as raised:
+                service.build_through_sqlite_fts(FCodeConfig(repo_path="."))
+            assert raised.value is control
+            return
+
+        with pytest.raises(type(control)) as raised:
+            _make_step4_svc().build_through_sqlite_fts(FCodeConfig(repo_path="."))
+        assert raised.value is control
+
     @pytest.mark.parametrize(
         "boundary", ["schema", "repository", "files", "symbols", "chunks", "status", "commit"]
     )

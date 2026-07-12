@@ -161,6 +161,38 @@ class TestConstructorDeps:
         svc.build_through_graphing(FCodeConfig(repo_path="."))
 
 
+@pytest.mark.parametrize("stage", ["inputs", "encoder", "graph"])
+@pytest.mark.parametrize(
+    "control", [KeyboardInterrupt("stop"), SystemExit("exit"), GeneratorExit("close")],
+    ids=["keyboard_interrupt", "system_exit", "generator_exit"],
+)
+def test_process_control_exceptions_propagate_from_step3(monkeypatch, stage, control):
+    encoder = MagicMock()
+    encoder.encode.return_value = _make_batch_result(
+        records=[_make_valid_record()],
+    )
+    graph_builder = MagicMock()
+    graph_builder.build.return_value = GraphBuildResult(
+        nodes=[], edges=[], node_count=0, edge_count=0,
+    )
+    service = _make_default_service(encoder=encoder, graph_builder=graph_builder)
+
+    if stage == "inputs":
+        monkeypatch.setattr(
+            "fcode.indexing.index_service.build_embedding_inputs",
+            lambda _chunks: (_ for _ in ()).throw(control),
+        )
+    elif stage == "encoder":
+        encoder.encode.side_effect = control
+    else:
+        graph_builder.build.side_effect = control
+
+    with pytest.raises(type(control)) as raised:
+        service.build_through_graphing(FCodeConfig(repo_path="."))
+
+    assert raised.value is control
+
+
 # ── build_through_graphing: config validation ────────────────────────────────
 
 
