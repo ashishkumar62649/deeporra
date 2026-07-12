@@ -22,17 +22,10 @@ class ActiveStatusReader:
             store.close()
         if row is None or row["status"] != IndexState.COMPLETE.value:
             raise FullRebuildError("active index status is unavailable")
-        counts = IndexCounts(
-            scanned=row["total_files"] or 0,
-            parsed=row["indexed_files"] or 0,
-            symbols=row["total_symbols"] or 0,
-            chunks=row["total_chunks"] or 0,
-            embedded=row["total_vectors"] or 0,
-            graph_nodes=row["total_graph_nodes"] or 0,
-            graph_edges=row["total_edges"] or 0,
-            warnings=row["warning_count"] or 0,
-            errors=row["error_count"] or 0,
-        )
+        count_fields = IndexCounts.__dataclass_fields__
+        if any(f"count_{field}" not in row or row[f"count_{field}"] is None for field in count_fields):
+            raise FullRebuildError("active index status is unavailable")
+        counts = IndexCounts(**{field: row[f"count_{field}"] for field in count_fields})
         return IndexStatusRecord(
             state=IndexState.COMPLETE,
             phase=IndexPhase.PERSIST,

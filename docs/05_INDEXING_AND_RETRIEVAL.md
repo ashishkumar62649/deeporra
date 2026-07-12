@@ -673,6 +673,8 @@ The chunker uses `ScannedFile.safe_content` (already redacted by the scanner) as
 8. Update `index_status` with counts.
 9. Commit the transaction.
 
+Completed active generations persist every canonical `IndexCounts` value. Status uses one read-only active-generation snapshot and never initializes, migrates, or mutates it; older generations without the complete count snapshot are reported as unavailable.
+
 **FTS5 tables:**
 ```sql
 CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(

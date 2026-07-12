@@ -8,7 +8,8 @@ from typing import Any, Optional
 
 from fcode.contracts.interfaces import SQLiteStoreProtocol
 from fcode.contracts.models import IndexRunResult, IndexStatusRecord
-from fcode.storage.migrations.v001_initial import SCHEMA_VERSION, apply as apply_migration
+from fcode.storage.migrations.v001_initial import apply as apply_v001
+from fcode.storage.migrations.v002_status_counts import COUNT_COLUMNS, SCHEMA_VERSION, apply as apply_v002
 
 
 MAX_ERROR_LENGTH = 500
@@ -61,22 +62,20 @@ class SQLiteStore:
     def initialize_schema(self) -> None:
         schema_ver = self._get_schema_version()
         if schema_ver is None:
-            apply_migration(self._conn)
+            apply_v001(self._conn)
+            apply_v002(self._conn)
             self._conn.commit()
-        elif schema_ver == SCHEMA_VERSION:
-            pass
         elif schema_ver > SCHEMA_VERSION:
             raise ValueError(
                 f"Unsupported schema version {schema_ver}. "
                 f"This version supports schema version {SCHEMA_VERSION}. "
                 "Downgrade is not supported."
             )
-        else:
-            raise ValueError(
-                f"Unsupported schema version {schema_ver}. "
-                f"Expected version {SCHEMA_VERSION}. "
-                "Migration is not supported."
-            )
+        elif schema_ver == 1:
+            apply_v002(self._conn)
+            self._conn.commit()
+        elif schema_ver != SCHEMA_VERSION:
+            raise ValueError(f"Unsupported schema version {schema_ver}.")
 
     def _get_schema_version(self) -> Optional[int]:
         try:
@@ -240,6 +239,7 @@ class SQLiteStore:
             "total_vectors", "warning_count", "error_count",
             "embedding_model", "active_search_mode",
             "started_at", "completed_at", "error_message",
+            *COUNT_COLUMNS,
         }
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:

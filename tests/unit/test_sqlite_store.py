@@ -8,6 +8,8 @@ import uuid as uuid_mod
 import pytest
 
 from fcode.storage.sqlite_store import SQLiteStore
+from fcode.storage.migrations.v001_initial import apply as apply_v001
+from fcode.storage.migrations.v002_status_counts import COUNT_COLUMNS
 
 
 @pytest.fixture
@@ -53,12 +55,28 @@ class TestConnection:
         ).fetchall()
         assert len(tables) >= 10
 
-    def test_schema_version_is_1(self, store):
+    def test_schema_version_is_2(self, store):
         ver = store.get_schema_version()
-        assert ver == 1
+        assert ver == 2
+
+    def test_v1_database_migrates_additively(self, tmp_path):
+        path = tmp_path / "v1.db"
+        conn = sqlite3.connect(path)
+        apply_v001(conn)
+        conn.commit()
+        conn.close()
+        migrated = SQLiteStore(str(path))
+        migrated.connect()
+        migrated.initialize_schema()
+        assert migrated._get_schema_version() == 2
+        assert set(COUNT_COLUMNS) <= {row["name"] for row in migrated.conn.execute("PRAGMA table_info(index_status)")}
+        migrated.initialize_schema()
+        assert migrated.conn.execute("PRAGMA foreign_key_check").fetchall() == []
+        migrated.close()
 
     def test_unsupported_schema_version_fails(self, store):
-        store.conn.execute("UPDATE schema_version SET version = 999")
+        store.conn.execute("DELETE FROM schema_version")
+        store.conn.execute("INSERT INTO schema_version (version) VALUES (999)")
         store.conn.commit()
         with pytest.raises(ValueError, match="Unsupported schema version"):
             s2 = SQLiteStore(store._db_path)
@@ -111,6 +129,10 @@ class TestTables:
             for r in store.conn.execute("PRAGMA table_info(index_status)").fetchall()
         }
         assert "error_count" in cols
+
+    def test_canonical_count_columns_exist(self, store):
+        cols = {r["name"] for r in store.conn.execute("PRAGMA table_info(index_status)").fetchall()}
+        assert set(COUNT_COLUMNS) <= cols
 
 
 class TestCheckConstraints:

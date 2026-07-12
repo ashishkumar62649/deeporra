@@ -200,6 +200,7 @@ class FullRebuildCoordinator:
                 total_vectors=embedding_result.success_count,
                 warning_count=counts.warnings,
                 error_count=0,
+                **{f"count_{field}": getattr(counts, field) for field in counts.__dataclass_fields__},
             )
             sqlite_store.commit_transaction()
         finally:
@@ -236,6 +237,7 @@ class FullRebuildCoordinator:
                 or status["total_graph_nodes"] != counts.graph_nodes
                 or status["total_edges"] != counts.graph_edges
                 or status["total_vectors"] != embedding_result.success_count
+                or any(status.get(f"count_{field}") != getattr(counts, field) for field in counts.__dataclass_fields__)
             )):
                 raise FullRebuildError("staged generation verification failed")
             fts_store = FTSStore(sqlite_store.conn)

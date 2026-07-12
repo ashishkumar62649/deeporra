@@ -115,7 +115,8 @@ def _dump_metadata(meta: Any) -> Optional[str]:
 # ── Row projections ──────────────────────────────────────────────────────────
 
 
-def to_file_rows(scanned_files: list[ScannedFile]) -> list[dict]:
+def to_file_rows(scanned_files: list[ScannedFile], parsed_files: list[ParsedFile] | None = None) -> list[dict]:
+    parsed = {file.file_id: file for file in parsed_files or []}
     rows: list[dict] = []
     for sf in scanned_files:
         rows.append({
@@ -129,8 +130,8 @@ def to_file_rows(scanned_files: list[ScannedFile]) -> list[dict]:
             "line_count": int(sf.line_count or 0),
             "content_hash": _safe_str(sf.content_hash, default=""),
             "has_secrets": 1 if getattr(sf, "has_secrets", False) else 0,
-            "parse_status": _parse_status_str(sf.parse_status),
-            "parse_error": (_safe_str(sf.parse_error)[:500]) if getattr(sf, "parse_error", None) else None,
+            "parse_status": _parse_status_str(parsed.get(sf.file_id).status if sf.file_id in parsed else sf.parse_status),
+            "parse_error": (_safe_str(parsed[sf.file_id].parse_error)[:500]) if sf.file_id in parsed and parsed[sf.file_id].parse_error else None,
             "indexed_at": _utcnow(),
         })
     return rows
@@ -286,7 +287,7 @@ def run_step4_persistence(
         repo_id = sqlite_store.create_repository_and_status(repo_path, content_hash=content_hash)
 
         # 3. file rows.
-        file_rows = to_file_rows(list(scan_result.files))
+        file_rows = to_file_rows(list(scan_result.files), parsed_files)
         for row in file_rows:
             row["repo_id"] = repo_id
         if file_rows:

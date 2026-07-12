@@ -335,7 +335,13 @@ CREATE TABLE index_status (
     active_search_mode TEXT CHECK(active_search_mode IN ('fts5', 'like_fallback')),
     started_at TIMESTAMP,
     completed_at TIMESTAMP,
-    error_message TEXT
+    error_message TEXT,
+    -- v2: nullable only for pre-v2 generations; complete v2 snapshots fill every field
+    count_scanned INTEGER, count_parsed INTEGER, count_graph_nodes INTEGER,
+    count_graph_edges INTEGER, count_chunks INTEGER, count_embedded INTEGER,
+    count_parse_errors INTEGER, count_symbols INTEGER,
+    count_embedding_eligible INTEGER, count_embedding_skipped INTEGER,
+    count_embedding_failed INTEGER, count_warnings INTEGER, count_errors INTEGER
 );
 
 CREATE TABLE tool_call_logs (
@@ -476,6 +482,8 @@ FTS5 rebuild occurs after the SQLite content transaction commits, using the comp
 For the WP5 Step 4 fresh-scope staging API, SQLite metadata, external-content FTS rebuild, the nonterminal `storing` status, and their verification counts use one connection and one transaction. Any Step 4 write failure rolls back the new repository scope. The post-commit rebuild described above remains the Step 5 coordinated full-replacement contract.
 
 WP5 Step 5 stores each complete rebuild under `.fcode/generations/<generation>/` with its SQLite database, FTS tables, and local Chroma directory together. A `.fcode/staging/<generation>.json` marker identifies an inactive build while it is being written. Only a verified generation with `index_status.status = 'complete'` may be named by the atomically replaced `.fcode/active.json` pointer. The prior generation is retained until the new active generation is reopened and verified; failed stages never become active.
+
+Every completed v2 generation stores all canonical `IndexCounts` fields in its `count_*` columns. Status resolves the active pointer once and reads that single database without initializing, migrating, or mutating it. A prior generation that lacks this complete count snapshot is unavailable rather than inaccurately reconstructed.
 
 ### FTS5 Row-Count Verification
 
