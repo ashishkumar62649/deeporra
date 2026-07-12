@@ -71,8 +71,8 @@ python -m pytest tests/ -v
 
 | Command | Description | Status |
 |---------|-------------|--------|
-| `fcode index <repo>` | Scan, parse, embed, and build graph for a repository | Functional |
-| `fcode status [repo]` | Show index status and stats | Functional |
+| `fcode index [repo]` | Perform a full local rebuild and safely promote it | Functional |
+| `fcode status [repo]` | Show the active complete generation status and counts | Functional |
 | `fcode doctor` | Check dependencies and environment health | Functional |
 | `fcode dashboard` | Start Streamlit dashboard on localhost | Planned (WP6) |
 | `fcode mcp --repo <repo>` | Start MCP stdio server for coding agents | Planned (WP6) |
@@ -161,7 +161,7 @@ Repository
 ## Testing
 
 ```bash
-# Run full suite (400 tests)
+# Run full suite (973+ tests)
 python -m pytest tests/ -v
 
 # Run with coverage
@@ -184,7 +184,8 @@ python -m pytest tests/unit/test_wp3_contract_compatibility.py -v
 | Parser | 56 | AST, symbols, imports, routes, Python parsing |
 | Graph | 19 | Graph building, node/edge construction |
 | WP3 Compatibility | 42 | Cross-module contract alignment |
-| **Total** | **400** | **All passing, 0 failures** |
+| Indexing/Integration | 543 | State machine, scan-parse-chunk, embed-graph, SQLite/FTS, full rebuild, CLI/status |
+| **Total** | **973** | **All passing, 0 failures** |
 
 ## Documentation
 
@@ -208,12 +209,12 @@ python -m pytest tests/unit/test_wp3_contract_compatibility.py -v
 - WP1 (CLI & Config) — CLI entry point, commands, configuration, health checks
 - WP2 (Storage) — SQLite schema, Chroma vectors, FTS5 search, graph persistence
 - WP3 (Scanner, Parser, Graph) — file scanning, Python AST parsing, code graph construction
-- 400 tests passing across all modules
+- WP4 (Chunking, Embeddings) — semantic chunk creation, local Sentence Transformers encoding
+- WP5 (Integration) — full pipeline orchestration, state machine, complete safe rebuilds, CLI index/status
+- 973 tests passing across all modules
 
-**Planned for next slices:**
-- WP4 — Chunking and embedding pipeline integration
-- WP5 — Full pipeline wiring (index service)
-- WP6 — Dashboard, MCP server, setup commands, end-to-end tests
+**Planned for next slice:**
+- WP6 — Dashboard, MCP server, setup commands, retrieval, end-to-end tests
 
 ## License
 

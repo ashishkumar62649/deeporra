@@ -43,9 +43,9 @@ class TestIndex:
         result = _invoke("index", ".")
         assert result.returncode == 1
 
-    def test_index_placeholder_message(self):
+    def test_index_failure_message_is_sanitized(self):
         result = _invoke("index", ".")
-        assert "Index command implementation has not started." in result.stdout
+        assert "Index failed." in result.stdout
 
     def test_index_no_fcode_dir_created(self):
         fcode_dir = os.path.join(os.getcwd(), ".fcode")
@@ -55,18 +55,18 @@ class TestIndex:
 
 
 class TestStatus:
-    def test_status_placeholder_exit_code(self):
+    def test_status_no_index_exit_code(self):
         result = _invoke("status")
-        assert result.returncode == 1
+        assert result.returncode == 0
 
-    def test_status_placeholder_message(self):
+    def test_status_no_index_message(self):
         result = _invoke("status")
-        assert "Status command implementation has not started." in result.stdout
+        assert "No active index." in result.stdout
 
-    def test_status_with_explicit_path(self):
+    def test_status_no_index_with_explicit_path(self):
         result = _invoke("status", ".")
-        assert result.returncode == 1
-        assert "Status command implementation has not started." in result.stdout
+        assert result.returncode == 0
+        assert "No active index." in result.stdout
 
 
 class TestDoctor:

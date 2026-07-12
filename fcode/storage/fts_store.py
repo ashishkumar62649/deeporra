@@ -99,6 +99,18 @@ class FTSStore:
         except sqlite3.OperationalError:
             return 0
 
+    def get_chunk_ids(self, conn: sqlite3.Connection, repo_id: str) -> list[str]:
+        try:
+            rows = conn.execute(
+                """SELECT c.id FROM chunks_fts
+                   JOIN chunks c ON c.rowid = chunks_fts.rowid
+                   WHERE c.repo_id = ? ORDER BY c.id""",
+                (repo_id,),
+            ).fetchall()
+            return [row["id"] for row in rows]
+        except sqlite3.OperationalError:
+            return []
+
     # ── FTS5 search ─────────────────────────────────────────────────────────
 
     def search_chunks(

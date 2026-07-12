@@ -94,6 +94,12 @@ class ChromaStore:
         results = self.collection.get(where={"repo_id": repo_id})
         return len(results["ids"]) if results and results["ids"] else 0
 
+    def get_embeddings(self, repo_id: str) -> dict[str, Any]:
+        return self.collection.get(
+            where={"repo_id": repo_id},
+            include=["embeddings", "metadatas"],
+        )
+
     # ── ChromaStoreProtocol conformance ─────────────────────────────────────
 
     def store_embeddings(self, records: list[EmbeddingRecord]) -> None:

@@ -59,7 +59,9 @@ fcode CLI (Typer)
 
 The CLI is thin. It parses arguments and calls service modules. No business logic in CLI handlers.
 
-**Pipeline orchestration:** The `fcode/indexing/index_service.py` module owns pipeline orchestration. It controls status transitions, executes cleanup rules, maps fatal errors to the error catalog, and contains no parser/storage/chunking algorithms.
+**Pipeline orchestration:** The `fcode/indexing/index_service.py` module owns pipeline orchestration. It controls status transitions, executes cleanup rules, maps fatal errors to the error catalog, and contains no parser/storage/chunking algorithms. `IndexService.build_through_chunking()` orchestrates config validation, scanner call, parser loop with recoverable error handling, and chunker call — producing an `IndexBuildResult` with in-memory scan, parse, and chunk data. `IndexService.build_through_graphing()` extends the pipeline through embedding (input construction + encoder call) and graph extraction (graph builder call). `IndexService.build_through_sqlite_fts()` uses injected SQLite and FTS stores to persist repository metadata, parsed structures, chunks, and evidence-backed keyword indexes in the same attempt. `build_complete_index()` stages SQLite/FTS, local Chroma vectors, and graph records in one isolated local generation, verifies them after reopening, then atomically replaces the active-generation pointer and reaches `COMPLETE`. `run_index()` is its thin complete-attempt wrapper. Full rebuild only is supported: the prior active generation remains intact until promotion verification completes; stale managed staging markers are removed safely. Incremental indexing, source edits, hosted services, and CLI activation remain deferred.
+
+WP5 Step 6 activates the existing Typer `fcode index [repo]` and `fcode status [repo]` commands. CLI composition is lazy and local: index constructs the accepted production pipeline and calls `run_index()` once; status reads only the active generation through the canonical pointer and never indexes, loads the embedding model, or creates a workspace. No-index status is a healthy zero-count response.
 
 ## 5. Indexer Architecture
 
@@ -289,6 +291,10 @@ Return: ranked evidence with file paths, symbols, line ranges
 
 ## 14. Module Boundaries
 
+`fcode/indexing/` contains:
+- `state_machine.py` — a pure state controller that performs no I/O, imports no feature modules, and knows nothing about the repository path. It tracks indexing state, active phase, completed phase, history, and the Phase-C persistent-replacement flag.
+- `index_service.py` — the pipeline orchestrator (Step 2: scan→parse→chunk; Step 3: embedding+graph; Step 4: storage — deferred).
+
 `fcode/indexing/index_service.py` is owned by the Integration Agent. It is the only module that controls:
 - Phase order
 - Phase progress
@@ -316,7 +322,7 @@ Return: ranked evidence with file paths, symbols, line ranges
 | `fcode/contracts/` | Shared enums, models, errors, interfaces (WP0) | None |
 | `fcode/cli/` | CLI entry point, argument parsing | contracts + All services |
 | `fcode/config/` | Configuration management | None |
-| `fcode/indexing/` | Pipeline orchestration (Phase A, B, C) | All index services |
+| `fcode/indexing/` | Pipeline orchestration (Phase A, B, C) and pure state machine | All index services |
 | `fcode/scanner/` | File discovery, ignore rules, secret detection | None |
 | `fcode/parser/` | Python AST extraction | None |
 | `fcode/chunking/` | Semantic chunk creation from safe scanner content and parser structure | scanner + parser output |
@@ -386,7 +392,8 @@ fcode/
 │   └── evidence.py         # evidence formatting
 ├── indexing/
 │   ├── __init__.py
-│   └── index_service.py    # pipeline orchestrator (Phase A, B, C)
+│   ├── state_machine.py    # pure state controller (no I/O)
+│   └── index_service.py    # pipeline orchestrator (Step 2: scan→parse→chunk; Step 3: embedding+graph)
 ├── graph/
 │   ├── __init__.py
 │   ├── graph_builder.py    # extract nodes/edges from AST

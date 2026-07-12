@@ -8,6 +8,83 @@ Indexing is the process of scanning a repository, parsing code, creating chunks,
 repo_path → scan → parse → chunk → embed → graph → store → .fcode/
 ```
 
+## 1a. Indexing State Machine
+
+The indexing pipeline is governed by a pure state machine in `fcode/indexing/state_machine.py`.
+It performs no I/O and knows nothing about the repository path.
+
+**Current-build scope (WP5 Steps 2-4):** Step 2 (`IndexService.build_through_chunking`)
+validates the repository path and config, calls the scanner once, iterates parser candidates
+with recoverable-error handling, and calls the chunker once. Step 3 (`IndexService.build_through_graphing`)
+extends the pipeline through embedding (input construction + encoder call) and graph extraction
+(graph builder call). Step 4 (`IndexService.build_through_sqlite_fts`) injects SQLite and FTS stores,
+uses the same state-machine attempt, and atomically stages repository/file metadata, parsed symbols and
+routes, semantic chunks, FTS indexes, and a `storing` status. Success stops nonterminally at `STORING`
+with `phase=PERSIST`, `completed_phase=GRAPH`, and `persistent_replacement_started=True`.
+Step 5 implements full rebuild only: it stages SQLite/FTS, local Chroma vectors, and graph records in an inactive generation; verifies cross-store IDs, counts, dimensions, endpoints, and status; then atomically promotes the active-generation pointer. Success is `COMPLETE` with `phase=PERSIST` and `completed_phase=PERSIST`. Failed stages leave the previous active generation intact. There is no incremental indexing, automatic source edit, hosted service, or CLI activation; Step 6 owns `fcode index` and `fcode status`, and Step 7 owns final acceptance and merge.
+
+Step 6 exposes `fcode index [repo]` for one full local rebuild (exit 0 on `complete`, 1 on a sanitized domain failure) and `fcode status [repo]` for the active generation only. Status exits 0 with `No active index.` when no pointer exists; malformed or unavailable active metadata exits 1 without fallback generation selection.
+
+### State progression
+
+```
+pending
+→ scanning
+→ parsing
+→ chunking
+→ embedding
+→ graphing
+→ storing
+→ complete
+```
+
+Error is allowed from every non-terminal state.
+
+### Phase mapping
+
+| State | phase (active) |
+|---|---|
+| PENDING | None |
+| SCANNING | SCAN |
+| PARSING | PARSE |
+| CHUNKING | CHUNK |
+| EMBEDDING | EMBED |
+| GRAPHING | GRAPH |
+| STORING | PERSIST |
+| COMPLETE | PERSIST |
+
+### Completed-phase mapping
+
+| Current state | completed_phase |
+|---|---|
+| PENDING | None |
+| SCANNING | None |
+| PARSING | SCAN |
+| CHUNKING | PARSE |
+| EMBEDDING | CHUNK |
+| GRAPHING | EMBED |
+| STORING | GRAPH |
+| COMPLETE | PERSIST |
+
+When transitioning to ERROR, the last completed phase and last active phase are preserved.
+
+### Phase A / B / C boundaries
+
+- **Phase A (preflight):** PENDING
+- **Phase B (in-memory build):** SCANNING through GRAPHING
+- **Phase C (persistent replacement):** STORING, COMPLETE; ERROR after STORING began
+
+The `persistent_replacement_started` flag is `False` for PENDING through GRAPHING,
+becomes `True` when STORING begins, and stays `True` through COMPLETE and
+ERROR-from-STORING. This flag distinguishes failures before and after
+destructive replacement began.
+
+### State-machine purity
+
+`state_machine.py` imports only `fcode.contracts.enums` and standard-library typing helpers.
+It does not import scanner, parser, chunker, embeddings, graph, storage, SQLite, Chroma,
+CLI, config, network, subprocess, or filesystem modules.
+
 **Data flow contracts:** See `03_SYSTEM_ARCHITECTURE.md` Section 16 for the exact data structures passed between pipeline components (`RepoInput`, `ScannedFile`, `ParsedFile`, `CodeChunk`, `EmbeddingInput`, `EmbeddingRecord`, `GraphNodeInput`, `GraphEdgeInput`).
 
 ## 2. Repository Intake

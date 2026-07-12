@@ -75,7 +75,7 @@ that every feature module depends on. Eliminate duplicate definitions across mod
 **Expected Outputs:**
 - `fcode/contracts/__init__.py` — package init with `__all__`
 - `fcode/contracts/enums.py` — `IndexPhase`, `IndexState`, `ParseStatus`, `FileType`, `SymbolType`, `GraphNodeType`, `GraphRelation`, `HttpMethod`, `Confidence`, `ChunkType`, `SearchMode`, `DiagnosticSeverity`, `SupportedSetupAgent`
-- `fcode/contracts/models.py` — all dataclasses (`RepoInput`, `ScannedFile`, `SkipFileDiagnostic`, `ScanResult`, `ParsedSymbol`, `ParsedImport`, `ParsedRoute`, `ParsedFile`, `GraphBuildResult`, `CodeChunk`, `EmbeddingRecord`, `EmbeddingBatchResult`, `StoredChunkRef`, `IndexCounts`, `IndexRunResult`, `IndexDiagnostic`, `IndexStatusRecord`, `DoctorCheck`, `DoctorResult`, `EvidenceItem`, `RetrievalCandidate`, `FCodeConfig`, `ToolResult`, `ToolError`, `EmbeddingInput`, `EmbeddingMetadata`, `GraphNodeInput`, `GraphEdgeInput`)
+- `fcode/contracts/models.py` — all dataclasses (`RepoInput`, `ScannedFile`, `SkipFileDiagnostic`, `ScanResult`, `ParsedSymbol`, `ParsedImport`, `ParsedRoute`, `ParsedFile`, `GraphBuildResult`, `CodeChunk`, `EmbeddingRecord`, `EmbeddingBatchResult`, `StoredChunkRef`, `IndexBuildResult`, `IndexCounts`, `IndexRunResult`, `IndexDiagnostic`, `IndexStatusRecord`, `DoctorCheck`, `DoctorResult`, `EvidenceItem`, `RetrievalCandidate`, `FCodeConfig`, `ToolResult`, `ToolError`, `EmbeddingInput`, `EmbeddingMetadata`, `GraphNodeInput`, `GraphEdgeInput`)
 - `fcode/contracts/errors.py` — `ErrorCode`, `McpErrorCode`
 - `fcode/contracts/interfaces.py` — protocol interfaces for all feature modules
 
@@ -422,11 +422,50 @@ that every feature module depends on. Eliminate duplicate definitions across mod
 
 ---
 
-## 11. Work Package 5: Integration
+## 11. Work Package 5: Integration (7 steps)
 
-**Agent Name:** Integration Agent
+### WP5 Step 1 — Complete
 
-**Goal:** Connect all pipeline modules into a working indexing pipeline. Implement `fcode/indexing/index_service.py` with the full Phase A/B/C state machine.
+Step 1 established indexing contracts (`IndexCounts`, `IndexDiagnostic`, `IndexRunResult` with validation),
+the pure `IndexStateMachine` (no I/O), and updated documentation.
+
+### WP5 Step 2 — Complete
+
+Step 2 implemented `IndexService.build_through_chunking()` — repository validation, scanner invocation,
+parser candidate selection with recoverable errors, chunker invocation, all validation, and in-memory
+result construction. Ends in CHUNKING state on success. No storage, embeddings, or graph work performed.
+See WP5 Step 2 report for full details.
+
+### WP5 Step 3 — Complete
+
+Step 3 extended the pipeline with `IndexService.build_through_graphing()` — embedding input construction,
+encoder invocation, embedding-result validation (type, counts, records, vectors, dimensions, paths),
+graph builder invocation, graph-result validation (type, nodes, edges, counts, paths, deps), and
+embedding/graph diagnostic classification. Fatal error handler `_build_fatal` extended with `chunks`
+and `embedding_result` kwargs. Backward-compatible constructor (keyword-only `encoder` and `graph_builder`
+parameters). `fcode/embeddings/__init__.py` exports `EXPECTED_DIMENSION`. No storage, persistence, or CLI activation was added in Step 3.
+
+### WP5 Step 4 — Complete
+
+Step 4 added `IndexService.build_through_sqlite_fts()` with keyword-only injected SQLite and FTS dependencies. One fresh state machine runs scan through graph and then enters `STORING` before any write. On a fresh repository scope, repository/status metadata, files, parsed symbols and routes, chunks, and external-content FTS tables are written on the shared SQLite connection in one transaction. Success is intentionally nonterminal (`phase=PERSIST`, `completed_phase=GRAPH`, `persistent_replacement_started=True`). FTS queries resolve to canonical stored chunk evidence. Vector/Chroma writes, graph-store writes, coordinated replacement, old-index deletion, active promotion, `COMPLETE`, and CLI activation remain Step 5 work.
+
+### WP5 Step 5 — Complete
+
+Step 5 added `build_complete_index()` and its thin `run_index()` wrapper. The complete in-memory attempt enters `STORING`, writes SQLite/FTS, local Chroma vectors, and graph rows to an isolated `.fcode/generations/<generation>` directory, verifies the reopened stores, marks the staged status `complete`, and atomically promotes `.fcode/active.json`. The prior active generation remains usable until promotion verification succeeds; failed stages and stale managed staging markers are removed safely. Full rebuild only is supported. Incremental indexing, source edits, hosted services, CLI activation, and Step 6 command exposure remained deferred until Step 6.
+
+### WP5 Step 6 — Complete
+
+Step 6 activates the existing `fcode index [repo]` and `fcode status [repo]` commands. Index lazily composes the accepted local pipeline and calls `run_index()` once. Status is bound to the requested repository, reads only `.fcode/active.json` and its referenced complete generation, and returns canonical persisted counts without scanning, model loading, or workspace mutation. No active index is a healthy status result; invalid active metadata is a sanitized failure.
+
+### WP5 Step 7 — Complete
+
+Step 7 performed the final WP5 acceptance, comprehensive branch audit, targeted verification, full regression, documentation closure, and merge into `main`. All 973 tests pass, the frozen architecture is intact, documentation marks WP5 complete, and WP6 is identified as the next work package. The merged main has been verified under the no-commit merge pattern before committing.
+
+### WP5 — Complete
+
+All seven WP5 steps are complete. The indexing pipeline provides state machine control, repository validation, scanning, parsing, chunking, embedding, graph construction, SQLite/FTS5 persistence, Chroma persistence, graph persistence, isolated staged generations, cross-store verification, safe active-generation promotion, previous-active preservation on failure, and working `fcode index` and `fcode status` CLI commands.
+
+### Next Work Package: WP6
 
 **Required Docs:**
 - `AGENTS.md` (Sections 1-22)
@@ -455,7 +494,15 @@ that every feature module depends on. Eliminate duplicate definitions across mod
 
 **Expected Outputs:**
 - `fcode/indexing/__init__.py`
-- `fcode/indexing/index_service.py` — pipeline orchestrator
+- `fcode/indexing/state_machine.py` — pure state controller (no I/O)
+- `fcode/indexing/index_service.py` — pipeline orchestrator (Step 2: scan→parse→chunk in memory)
+
+**`state_machine.py` contract:**
+- `IndexStateMachine` — deterministic state machine with legal forward transitions and ERROR from every non-terminal state
+- `InvalidIndexStateTransition` — exception for illegal transitions
+- No I/O, no feature-module imports, no filesystem access
+- Tracks: state, phase, completed_phase, history (immutable tuple), terminal flag, persistent_replacement_started flag
+- Phase A: PENDING; Phase B: SCANNING through GRAPHING; Phase C begins at STORING
 
 **`index_service.py` contract:**
 - Orchestrates services only; contains no parser/storage/chunking algorithms
@@ -469,6 +516,18 @@ that every feature module depends on. Eliminate duplicate definitions across mod
 - Storage modules do not call each other
 
 **Required Tests:** Cross-module integration tests owned by Tests Agent (WP6). Integration Agent verifies unit tests pass.
+
+**WP5 Step 1 specific tests (owned by Integration Agent):**
+- `tests/unit/test_index_state_machine.py` — 64 tests covering initial state, happy path, failure transitions, illegal transitions, public methods, and exception behavior
+
+**WP5 Step 1 contract changes:**
+- `IndexCounts` — appended parse_errors, symbols, embedding_eligible, embedding_skipped, embedding_failed, warnings, errors; added `validate()`
+- `IndexDiagnostic` — added code, recoverable, repo_relative_path, details fields; phase made optional; added `validate()`
+- `IndexRunResult` — state defaults to PENDING; phase defaults to None; added diagnostics list; added `validate()`
+
+**WP5 Step 2 contract changes:**
+- `IndexBuildResult` — new dataclass with fields: run_result, completed_phase, state_history, persistent_replacement_started, scan_result, parsed_files, chunks, embedding_result, graph_result
+- `fcode/indexing/index_service.py` — new module; `IndexService` class with `build_through_chunking()` only (no `run_index`, `get_status`, `get_counts`)
 
 **Documentation Updates:**
 - Update any doc if contracts changed during integration

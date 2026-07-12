@@ -473,6 +473,10 @@ During every full rebuild, after all content rows are inserted:
 
 FTS5 rebuild occurs after the SQLite content transaction commits, using the complete current content tables.
 
+For the WP5 Step 4 fresh-scope staging API, SQLite metadata, external-content FTS rebuild, the nonterminal `storing` status, and their verification counts use one connection and one transaction. Any Step 4 write failure rolls back the new repository scope. The post-commit rebuild described above remains the Step 5 coordinated full-replacement contract.
+
+WP5 Step 5 stores each complete rebuild under `.fcode/generations/<generation>/` with its SQLite database, FTS tables, and local Chroma directory together. A `.fcode/staging/<generation>.json` marker identifies an inactive build while it is being written. Only a verified generation with `index_status.status = 'complete'` may be named by the atomically replaced `.fcode/active.json` pointer. The prior generation is retained until the new active generation is reopened and verified; failed stages never become active.
+
 ### FTS5 Row-Count Verification
 
 FTS5 row-count verification occurs before status becomes `complete`:
@@ -715,6 +719,79 @@ If Chroma writing, FTS population, verification, or final status update fails af
 
 **The previous index is NOT restored after Phase C has begun.** This limitation is explicit. The destructive replacement in Phase C step 5 is irreversible.
 
-## 26. Config File Schema
+## 26. In-Memory Indexing Contracts
+
+These contracts are used for in-process indexing communication (not persisted to SQLite):
+
+### IndexCounts
+
+| Field | Meaning |
+|---|---|
+| scanned | Eligible scanner records produced |
+| parsed | Python files successfully parsed |
+| graph_nodes | Graph nodes produced |
+| graph_edges | Graph edges produced |
+| chunks | Code/document/config chunks produced |
+| embedded | Successful embedding records produced |
+| parse_errors | Python files with parse status ERROR |
+| symbols | Parsed symbols produced |
+| embedding_eligible | Inputs eligible for embedding |
+| embedding_skipped | Inputs intentionally skipped |
+| embedding_failed | Eligible inputs that failed |
+| warnings | Recoverable indexing diagnostics |
+| errors | Fatal indexing diagnostics |
+
+All defaults are zero. `validate()` raises `ValueError` on non-integer, boolean, or negative values.
+
+### IndexDiagnostic
+
+Structured warning or error produced during indexing.
+
+| Field | Type | Meaning |
+|---|---|---|
+| code | str | Non-empty diagnostic code from the error catalog |
+| message | str | Non-empty sanitized message (max 500 chars) |
+| phase | Optional[IndexPhase] | Active phase when produced; None during preflight |
+| recoverable | bool | Warning = True, Error = False |
+| severity | DiagnosticSeverity | `warning` or `error` |
+| repo_relative_path | Optional[str] | Repo-relative path (forward slashes, no `..`, no absolute) |
+| details | Optional[str] | Optional sanitized context |
+
+`validate()` enforces severity/recoverable consistency, path rules, and length limits.
+
+### IndexRunResult
+
+In-memory result of a single indexing attempt.
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| state | IndexState | PENDING | Final/current attempt state |
+| phase | Optional[IndexPhase] | None | Active or last active phase |
+| counts | IndexCounts | IndexCounts() | In-memory attempt counters |
+| diagnostics | list[IndexDiagnostic] | [] | Structured warnings and errors |
+| errors | list[str] | [] | Backward-compatible sanitized error strings |
+
+`validate()` confirms: count validity, diagnostic validity, state/phase mapping,
+COMPLETE has no fatal diagnostics, ERROR has fatal diagnostics or error strings.
+
+### IndexBuildResult
+
+Output of `IndexService.build_through_chunking()` (scan → parse → chunk), `build_through_graphing()` (scan → parse → chunk → embed → graph), or `build_through_sqlite_fts()` (the same attempt plus SQLite metadata and FTS staging). Step 4 remains nonterminal at `STORING`; vectors and graph records are not persisted.
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| run_result | IndexRunResult | IndexRunResult() | Pipeline run metadata (state, phase, counts, diagnostics) |
+| completed_phase | Optional[IndexPhase] | None | Highest phase that finished before C phase |
+| state_history | tuple[IndexState, ...] | (PENDING,) | Immutable ordered sequence of states visited |
+| persistent_replacement_started | bool | False | True only after STORING entered |
+| scan_result | Optional[ScanResult] | None | Raw output of the scanner step |
+| parsed_files | list[ParsedFile] | [] | Output of the parser step |
+| chunks | list[CodeChunk] | [] | Output of the chunker step |
+| embedding_result | Optional[EmbeddingBatchResult] | None | Filled in WP5 Step 3 |
+| graph_result | Optional[GraphBuildResult] | None | Filled in WP5 Step 3 |
+
+Field order is fixed. All fields directly accessible after the method returns.
+
+## 27. Config File Schema
 
 See `03_SYSTEM_ARCHITECTURE.md` Section 21 for the full `.fcode/config.json` schema definition. The config file stores index configuration, embedding model settings, storage paths, and privacy settings.
