@@ -2,7 +2,7 @@ import copy
 import json
 from pathlib import Path
 import pytest
-from tests.support.wp6_manifest import validate_manifest
+from tests.support.wp6_manifest import REQUIRED, validate_manifest
 
 
 def valid():
@@ -39,10 +39,24 @@ def test_seven_distinct_parse_statuses_are_accepted():
     validate_manifest(manifest)
 
 
-def test_actual_g01_manifest_reports_legacy_fields():
+def test_actual_g01_manifest_uses_strict_semantic_schema():
     path = Path(__file__).parents[1] / "fixtures" / "wp6" / "manifests" / "python_service.json"
-    with pytest.raises(ValueError, match=r"required fields mismatch: \['counts', 'files_expected_to_scan', 'integrity'\]"):
-        validate_manifest(json.loads(path.read_text(encoding="utf-8")))
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    validate_manifest(manifest)
+    assert set(manifest) == REQUIRED
+    assert not {"counts", "files_expected_to_scan", "integrity"} & set(manifest)
+    assert len(manifest["scanned_files"]) == 7
+    assert len(manifest["parse_statuses"]) == 7
+    assert len({record["path"] for record in manifest["parse_statuses"]}) == 7
+    assert len(manifest["symbols"]) == 11
+    assert len(manifest["imports"]) == 4
+    assert len(manifest["routes"]) == 2
+    assert len(manifest["tests"]) == 1
+    assert len(manifest["chunks"]) == 19
+    assert len(manifest["graph_nodes"]) == 21
+    assert len(manifest["graph_edges"]) == 21
+    assert len(manifest["warnings"]) == 0
+    assert len(manifest["errors"]) == 0
 
 @pytest.mark.parametrize("case", ["imports","chunks","graph_nodes","graph_edges","unknown","absolute","traversal","range","symbol","route","chunk","node","edge","source","target","parent","owner","secret","fcode","opaque"], ids=str)
 def test_invalid_manifest(case):

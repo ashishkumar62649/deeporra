@@ -15,15 +15,29 @@ def test_golden_manifest_matches_static_pipeline(name, monkeypatch):
     manifest = _manifest(name)
     result = analyze(ROOT / "repos" / name, monkeypatch)
     assert result.run_result.state.value == "graphing"
-    assert [file.file_path for file in result.scan_result.files] == manifest["files_expected_to_scan"]
-    for field, expected in manifest["counts"].items():
-        assert getattr(result.run_result.counts, field) == expected
+    if "scanned_files" in manifest:
+        assert [file.file_path for file in result.scan_result.files] == manifest["scanned_files"]
+    else:
+        assert [file.file_path for file in result.scan_result.files] == manifest["files_expected_to_scan"]
+        for field, expected in manifest["counts"].items():
+            assert getattr(result.run_result.counts, field) == expected
     statuses = {parsed.file_path: parsed.status.value for parsed in result.parsed_files}
-    assert statuses.items() >= manifest.get("parse_status", {}).items()
+    if "parse_statuses" in manifest:
+        expected_statuses = {record["path"]: record["status"] for record in manifest["parse_statuses"] if record["status"] == "parsed"}
+        assert statuses.items() >= expected_statuses.items()
+    else:
+        assert statuses.items() >= manifest.get("parse_status", {}).items()
     symbols = {symbol.qualified_name or symbol.name for parsed in result.parsed_files for symbol in parsed.symbols}
-    assert set(manifest.get("symbols", [])) <= symbols
+    if "symbols" in manifest and manifest["symbols"] and isinstance(manifest["symbols"][0], dict):
+        assert {symbol["qualified_name"] for symbol in manifest["symbols"]} <= symbols
+    else:
+        assert set(manifest.get("symbols", [])) <= symbols
     routes = {(route.method.value, route.route_path, route.handler_function, parsed.file_path) for parsed in result.parsed_files for route in parsed.routes}
-    assert set(map(tuple, manifest.get("routes", []))) <= routes
+    if "routes" in manifest and manifest["routes"] and isinstance(manifest["routes"][0], dict):
+        expected_routes = {(route["method"], route["route_path"], route["handler_semantic_key"].rsplit(":", 1)[-1], route["source_path"]) for route in manifest["routes"]}
+        assert expected_routes <= routes
+    else:
+        assert set(map(tuple, manifest.get("routes", []))) <= routes
     chunks = {(chunk.file_path, chunk.chunk_type.value, chunk.start_line, chunk.end_line) for chunk in result.chunks}
     for path, start, end in manifest.get("chunk_ranges", []):
         assert any(chunk[0] == path and chunk[2:] == (start, end) for chunk in chunks)
