@@ -1,0 +1,5 @@
+# Force LF line endings for golden fixture files to ensure deterministic
+# SHA256 digests across platforms. The fixture-integrity test computes
+# digests from working-tree bytes; without this rule Git's autocrlf
+# conversion would produce different bytes (CRLF) on Windows.
+tests/fixtures/wp6/** text eol=lf
