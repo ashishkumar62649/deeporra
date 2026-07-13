@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from fcode.chunking.chunker import Chunker
-from fcode.contracts import FCodeConfig, FileType, ParseStatus, RepoInput, SymbolType
+from fcode.contracts import FCodeConfig, FileType, ParseStatus, ParsedFile, RepoInput, SymbolType
 from fcode.embeddings.encoder import EmbeddingEncoder, build_embedding_inputs
 from fcode.graph.graph_builder import build
 from fcode.parser.python_ast import parse
@@ -66,6 +66,17 @@ def _actual_static(root: Path) -> dict[str, object]:
         if item.parse_status == ParseStatus.PENDING and not item.is_binary
     ]
     parsed_by_id = {item.file_id: item for item in parsed}
+    graph_inputs = [
+        parsed_by_id.get(item.file_id)
+        or ParsedFile(
+            file_path=item.file_path,
+            file_type=item.file_type,
+            status=item.parse_status,
+            file_id=item.file_id,
+            line_count=item.line_count,
+        )
+        for item in scanned.files
+    ]
     route_handlers = {
         route.handler_function
         for item in parsed
@@ -193,7 +204,7 @@ def _actual_static(root: Path) -> dict[str, object]:
             }
         )
 
-    graph = build(parsed)
+    graph = build(graph_inputs)
     graph_nodes = []
     node_qualified_names = {}
     for item in parsed:
