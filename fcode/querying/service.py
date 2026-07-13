@@ -238,8 +238,11 @@ class QueryService:
                 text_results = self._text_search(fts, store.conn, query, repo_id, limit)
 
             if mode in ("semantic", "hybrid"):
-                semantic_results = self._semantic_search(query, repo_id, limit)
-
+                try:
+                    semantic_results = self._semantic_search(query, repo_id, limit)
+                except QueryValidationError:
+                    if mode == "semantic":
+                        raise
             if mode == "text":
                 return text_results
             if mode == "semantic":
@@ -287,8 +290,10 @@ class QueryService:
         encoder = EmbeddingEncoder()
         try:
             encoder.ensure_available()
-        except EmbeddingEncoderError:
-            return []
+        except EmbeddingEncoderError as exc:
+            raise QueryValidationError(
+                "Semantic search is unavailable: the embedding model could not be loaded."
+            ) from exc
 
         inp = EmbeddingInput(
             chunk_id="query",

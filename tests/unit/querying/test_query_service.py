@@ -153,7 +153,7 @@ def test_text_search_returns_known_content(tmp_path, monkeypatch):
 # ── 5. Semantic search ──────────────────────────────────────────────────
 
 
-def test_semantic_search_uses_embedding_boundary(tmp_path, monkeypatch):
+def test_semantic_search_returns_real_results(tmp_path, monkeypatch):
     repo = tmp_path / "repo"
     repo.mkdir()
     _write_small_repo(repo)
@@ -161,7 +161,48 @@ def test_semantic_search_uses_embedding_boundary(tmp_path, monkeypatch):
 
     qs = QueryService(str(repo))
     results = qs.search_code("greet", mode="semantic")
-    assert len(results) >= 0
+    assert isinstance(results, list)
+    for r in results:
+        assert r.match_source == "semantic"
+        assert r.semantic_score is not None
+        assert r.text_score is None
+
+
+def test_semantic_mode_raises_when_encoder_unavailable(tmp_path, monkeypatch):
+    from fcode.contracts.errors import ErrorCode
+    from fcode.embeddings.encoder import EmbeddingEncoderError
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _write_small_repo(repo)
+    _index_repo(repo, monkeypatch)
+
+    qs = QueryService(str(repo))
+    with monkeypatch.context() as m:
+        m.setattr(EmbeddingEncoder, "ensure_available",
+                  lambda self: (_ for _ in ()).throw(EmbeddingEncoderError(ErrorCode.EMBEDDING_MODEL_UNAVAILABLE, "no model")))
+        with pytest.raises(QueryValidationError, match="Semantic search is unavailable"):
+            qs.search_code("greet", mode="semantic")
+
+
+def test_hybrid_mode_degrades_gracefully_when_encoder_unavailable(tmp_path, monkeypatch):
+    from fcode.contracts.errors import ErrorCode
+    from fcode.embeddings.encoder import EmbeddingEncoderError
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _write_small_repo(repo)
+    _index_repo(repo, monkeypatch)
+
+    qs = QueryService(str(repo))
+    with monkeypatch.context() as m:
+        m.setattr(EmbeddingEncoder, "ensure_available",
+                  lambda self: (_ for _ in ()).throw(EmbeddingEncoderError(ErrorCode.EMBEDDING_MODEL_UNAVAILABLE, "no model")))
+        results = qs.search_code("greet", mode="hybrid")
+        assert len(results) >= 1
+        for r in results:
+            assert r.match_source in ("text",)
+            assert r.semantic_score is None
 
 
 # ── 6. Hybrid search deduplicates ───────────────────────────────────────
