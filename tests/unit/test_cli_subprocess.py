@@ -39,18 +39,18 @@ class TestHelp:
 
 
 class TestIndex:
-    def test_index_placeholder_exit_code(self):
-        result = _invoke("index", ".")
+    def test_index_placeholder_exit_code(self, tmp_path):
+        result = _invoke("index", str(tmp_path / "nonexistent"))
         assert result.returncode == 1
 
-    def test_index_failure_message_is_sanitized(self):
-        result = _invoke("index", ".")
+    def test_index_failure_message_is_sanitized(self, tmp_path):
+        result = _invoke("index", str(tmp_path / "nonexistent"))
         assert "Index failed." in result.stdout
 
-    def test_index_no_fcode_dir_created(self):
+    def test_index_no_fcode_dir_created(self, tmp_path):
         fcode_dir = os.path.join(os.getcwd(), ".fcode")
         existed_before = os.path.isdir(fcode_dir)
-        _invoke("index", ".")
+        _invoke("index", str(tmp_path / "nonexistent"))
         assert os.path.isdir(fcode_dir) == existed_before
 
 
