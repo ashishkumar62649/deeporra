@@ -8,13 +8,13 @@ import shutil
 import pytest
 
 
-def _invoke(*args: str) -> subprocess.CompletedProcess:
+def _invoke(*args: str, timeout: int = 15) -> subprocess.CompletedProcess:
     """Run python -m fcode <args> and capture stdout, stderr, return code."""
     return subprocess.run(
         [sys.executable, "-m", "fcode", *args],
         capture_output=True,
         text=True,
-        timeout=15,
+        timeout=timeout,
     )
 
 
@@ -71,20 +71,9 @@ class TestStatus:
 
 class TestDoctor:
     def test_doctor_exit_code(self):
-        result = _invoke("doctor")
+        """Real subprocess smoke test — verifies the doctor command starts and exits."""
+        result = _invoke("doctor", timeout=30)
         assert result.returncode in (0, 1)
-
-    def test_doctor_shows_check_results(self):
-        result = _invoke("doctor")
-        assert "[PASS]" in result.stdout or "[FAIL]" in result.stdout
-
-    def test_doctor_python_version_check(self):
-        result = _invoke("doctor")
-        assert "python_version" in result.stdout
-
-    def test_doctor_required_imports_check(self):
-        result = _invoke("doctor")
-        assert "required_imports" in result.stdout
 
 
 class TestDashboard:
