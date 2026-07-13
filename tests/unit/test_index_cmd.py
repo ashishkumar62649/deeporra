@@ -39,11 +39,11 @@ class TestComposition:
         set_index_service(fake)
         assert get_index_service() is fake
 
-    def test_set_service_is_process_local(self):
+    def test_set_service_is_process_local(self, tmp_path):
         fake = FakeIndexService()
         set_index_service(fake)
         result = subprocess.run(
-            [sys.executable, "-m", "fcode", "index", "."],
+            [sys.executable, "-m", "fcode", "index", str(tmp_path / "nonexistent")],
             capture_output=True, text=True, timeout=15,
         )
         assert result.returncode == 1
@@ -55,9 +55,9 @@ class TestComposition:
 
 
 class TestCommand:
-    def test_failure_is_sanitized(self):
+    def test_failure_is_sanitized(self, tmp_path):
         result = subprocess.run(
-            [sys.executable, "-m", "fcode", "index", "."],
+            [sys.executable, "-m", "fcode", "index", str(tmp_path / "nonexistent")],
             capture_output=True, text=True, timeout=15,
         )
         assert result.returncode == 1
