@@ -110,7 +110,24 @@ def create_mcp_server() -> FastMCP:
         results = qs.search_code(query=query, limit=limit, mode=mode)
         return _safe_json(results)
 
-    # ── Tool 3: find_symbols ──────────────────────────────────────────
+    # ── Tool 3: hybrid_search ────────────────────────────────────────
+
+    @mcp.tool()
+    def hybrid_search(
+        repository_root: str,
+        query: str,
+        limit: int = 10,
+    ) -> str:
+        """Search code using hybrid (text + semantic) ranking."""
+        _validate_root(repository_root)
+        if not query or not query.strip():
+            raise QueryValidationError("query must not be blank.")
+        _validate_limit(limit)
+        qs = QueryService(repository_root)
+        results = qs.search_code(query=query, limit=limit, mode="hybrid")
+        return _safe_json(results)
+
+    # ── Tool 4: find_symbols ─────────────────────────────────────────
 
     @mcp.tool()
     def find_symbols(
@@ -126,7 +143,7 @@ def create_mcp_server() -> FastMCP:
         results = qs.find_symbols(query=query, exact=exact, limit=limit)
         return _safe_json(results)
 
-    # ── Tool 4: find_routes ───────────────────────────────────────────
+    # ── Tool 5: find_routes ─────────────────────────────────────────
 
     @mcp.tool()
     def find_routes(
@@ -148,7 +165,7 @@ def create_mcp_server() -> FastMCP:
         )
         return _safe_json(results)
 
-    # ── Tool 5: get_related_code ──────────────────────────────────────
+    # ── Tool 6: get_related_code ─────────────────────────────────────
 
     @mcp.tool()
     def get_related_code(
@@ -175,7 +192,7 @@ def create_mcp_server() -> FastMCP:
         )
         return _safe_json(results)
 
-    # ── Tool 6: analyze_change_impact ─────────────────────────────────
+    # ── Tool 7: analyze_change_impact ────────────────────────────────
 
     @mcp.tool()
     def analyze_change_impact(
@@ -193,7 +210,7 @@ def create_mcp_server() -> FastMCP:
         result = qs.analyze_change_impact(semantic_key=semantic_key, limit=limit)
         return _safe_json(result)
 
-    # ── Tool 7: find_existing_implementation ──────────────────────────
+    # ── Tool 8: find_existing_implementation ─────────────────────────
 
     @mcp.tool()
     def find_existing_implementation(

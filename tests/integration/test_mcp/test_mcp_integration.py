@@ -182,9 +182,9 @@ async def test_mcp_stdio_smoke(indexed_repo):
     tools_result = list_resp.root.result
     assert isinstance(tools_result, dict), f"tools_result is {type(tools_result)}: {tools_result}"
     tool_names = [t["name"] if isinstance(t, dict) else t.name for t in tools_result["tools"]]
-    for name in ["repository_summary", "search_code", "find_symbols",
-                  "find_routes", "get_related_code", "analyze_change_impact",
-                  "find_existing_implementation"]:
+    for name in ["repository_summary", "search_code", "hybrid_search",
+                  "find_symbols", "find_routes", "get_related_code",
+                  "analyze_change_impact", "find_existing_implementation"]:
         assert name in tool_names
 
     call_resp = responses[2]

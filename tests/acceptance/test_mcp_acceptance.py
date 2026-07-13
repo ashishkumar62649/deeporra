@@ -1,7 +1,7 @@
 """MCP-specific acceptance test — end-to-end protocol exchange.
 
 This test creates a repository, indexes it, and verifies that the MCP server
-can serve all seven tools through the MCP protocol using in-process streams.
+can serve all eight tools through the MCP protocol using in-process streams.
 It is the acceptance gate for Agent D's MCP implementation.
 """
 
@@ -134,11 +134,12 @@ async def test_mcp_acceptance_all_tools(indexed_repo):
         calls = [
             (10, "repository_summary", {"repository_root": indexed_repo}),
             (11, "search_code", {"repository_root": indexed_repo, "query": "util_func", "mode": "text", "limit": 10}),
-            (12, "find_symbols", {"repository_root": indexed_repo, "query": "Service", "exact": False, "limit": 20}),
-            (13, "find_routes", {"repository_root": indexed_repo, "method": "GET", "path_query": "/api", "handler_query": "", "limit": 50}),
-            (14, "get_related_code", {"repository_root": indexed_repo, "semantic_key": "Service", "direction": "outgoing", "edge_types": "", "depth": 1, "limit": 100}),
-            (15, "analyze_change_impact", {"repository_root": indexed_repo, "semantic_key": "util_func", "limit": 100}),
-            (16, "find_existing_implementation", {"repository_root": indexed_repo, "query": "process", "limit": 10}),
+            (12, "hybrid_search", {"repository_root": indexed_repo, "query": "util_func", "limit": 10}),
+            (13, "find_symbols", {"repository_root": indexed_repo, "query": "Service", "exact": False, "limit": 20}),
+            (14, "find_routes", {"repository_root": indexed_repo, "method": "GET", "path_query": "/api", "handler_query": "", "limit": 50}),
+            (15, "get_related_code", {"repository_root": indexed_repo, "semantic_key": "Service", "direction": "outgoing", "edge_types": "", "depth": 1, "limit": 100}),
+            (16, "analyze_change_impact", {"repository_root": indexed_repo, "semantic_key": "util_func", "limit": 100}),
+            (17, "find_existing_implementation", {"repository_root": indexed_repo, "query": "process", "limit": 10}),
         ]
         for cid, name, args in calls:
             msg = JSONRPCMessage(jsonrpc="2.0", id=cid, method="tools/call",
@@ -195,37 +196,44 @@ async def test_mcp_acceptance_all_tools(indexed_repo):
     assert len(results) >= 1
     assert results[0]["match_source"] == "text"
 
-    # ── Tool 3: find_symbols ────────────────────────────────────────
+    # ── Tool 3: hybrid_search ───────────────────────────────────────
     r3 = responses[3]
     assert r3.root.id == 12
     cl = r3.root.result["content"]
+    hresults = json.loads(cl[0]["text"] if isinstance(cl[0], dict) else cl[0].text)
+    assert len(hresults) >= 1
+
+    # ── Tool 4: find_symbols ────────────────────────────────────────
+    r4 = responses[4]
+    assert r4.root.id == 13
+    cl = r4.root.result["content"]
     symbols = json.loads(cl[0]["text"] if isinstance(cl[0], dict) else cl[0].text)
     assert len(symbols) >= 1
     assert any("Service" in s["qualified_name"] for s in symbols)
 
-    # ── Tool 4: find_routes ─────────────────────────────────────────
-    r4 = responses[4]
-    assert r4.root.id == 13
-    cl = r4.root.result["content"]
+    # ── Tool 5: find_routes ─────────────────────────────────────────
+    r5 = responses[5]
+    assert r5.root.id == 14
+    cl = r5.root.result["content"]
     routes = json.loads(cl[0]["text"] if isinstance(cl[0], dict) else cl[0].text)
     assert len(routes) >= 1
 
-    # ── Tool 5: get_related_code ────────────────────────────────────
-    r5 = responses[5]
-    assert r5.root.id == 14
-    assert r5.root.result is not None
-
-    # ── Tool 6: analyze_change_impact ───────────────────────────────
+    # ── Tool 6: get_related_code ────────────────────────────────────
     r6 = responses[6]
     assert r6.root.id == 15
-    cl = r6.root.result["content"]
-    impact = json.loads(cl[0]["text"] if isinstance(cl[0], dict) else cl[0].text)
-    assert impact["analysis_type"] == "first_order"
+    assert r6.root.result is not None
 
-    # ── Tool 7: find_existing_implementation ────────────────────────
+    # ── Tool 7: analyze_change_impact ───────────────────────────────
     r7 = responses[7]
     assert r7.root.id == 16
     cl = r7.root.result["content"]
+    impact = json.loads(cl[0]["text"] if isinstance(cl[0], dict) else cl[0].text)
+    assert impact["analysis_type"] == "first_order"
+
+    # ── Tool 8: find_existing_implementation ────────────────────────
+    r8 = responses[8]
+    assert r8.root.id == 17
+    cl = r8.root.result["content"]
     impl = json.loads(cl[0]["text"] if isinstance(cl[0], dict) else cl[0].text)
     assert "code_results" in impl
     assert "symbol_results" in impl

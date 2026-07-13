@@ -31,6 +31,7 @@ def _tool_meta(server, name):
 EXPECTED_TOOLS = [
     "repository_summary",
     "search_code",
+    "hybrid_search",
     "find_symbols",
     "find_routes",
     "get_related_code",
@@ -330,3 +331,136 @@ def test_invalid_limit_error_propagates(monkeypatch):
     with pytest.raises(QueryValidationError):
         server._tool_manager._tools["search_code"].fn(
             repository_root="/fake", query="greet", mode="text", limit=0)
+
+
+def test_no_duplicate_tool_names():
+    server = _make_server()
+    names = _tool_names(server)
+    assert len(names) == len(set(names))
+    assert set(names) == set(EXPECTED_TOOLS)
+
+
+def test_hybrid_search_delegates(monkeypatch):
+    fake_results = [CodeSearchResult(
+        chunk_id="c1", source_path="main.py", start_line=1, end_line=10,
+        chunk_kind="function", owner_semantic_key="func1",
+        display_text="def greet():", text_score=0.9, semantic_score=0.8,
+        combined_score=0.85, match_source="hybrid",
+    )]
+    class _FakeQS:
+        def __init__(self, root): self.root = root
+        def search_code(self, query, limit, mode):
+            assert mode == "hybrid"
+            return fake_results
+    monkeypatch.setattr("fcode.mcp_server.server.QueryService", _FakeQS)
+    server = _make_server()
+    result_str = server._tool_manager._tools["hybrid_search"].fn(
+        repository_root="/fake", query="greet", limit=10)
+    data = json.loads(result_str)
+    assert len(data) == 1
+    assert data[0]["chunk_id"] == "c1"
+
+
+def test_hybrid_search_passes_params(monkeypatch):
+    captured = {}
+    class _FakeQS:
+        def __init__(self, root):
+            captured["root"] = root
+        def search_code(self, query, limit, mode):
+            captured["query"] = query
+            captured["limit"] = limit
+            captured["mode"] = mode
+            return []
+    monkeypatch.setattr("fcode.mcp_server.server.QueryService", _FakeQS)
+    server = _make_server()
+    server._tool_manager._tools["hybrid_search"].fn(
+        repository_root="/repo", query="find_x", limit=25)
+    assert captured["root"] == "/repo"
+    assert captured["query"] == "find_x"
+    assert captured["limit"] == 25
+    assert captured["mode"] == "hybrid"
+
+
+def test_hybrid_search_blank_root_rejected():
+    server = _make_server()
+    with pytest.raises(QueryValidationError, match="repository_root must not be blank"):
+        server._tool_manager._tools["hybrid_search"].fn(
+            repository_root="", query="greet", limit=10)
+
+
+def test_hybrid_search_blank_query_rejected():
+    server = _make_server()
+    with pytest.raises(QueryValidationError, match="query must not be blank"):
+        server._tool_manager._tools["hybrid_search"].fn(
+            repository_root="/repo", query="", limit=10)
+
+
+def test_hybrid_search_invalid_limit_rejected():
+    server = _make_server()
+    with pytest.raises(QueryValidationError):
+        server._tool_manager._tools["hybrid_search"].fn(
+            repository_root="/repo", query="greet", limit=0)
+    with pytest.raises(QueryValidationError):
+        server._tool_manager._tools["hybrid_search"].fn(
+            repository_root="/repo", query="greet", limit=501)
+    with pytest.raises(QueryValidationError):
+        server._tool_manager._tools["hybrid_search"].fn(
+            repository_root="/repo", query="greet", limit=-1)
+
+
+def test_hybrid_search_normal_results_serialize(monkeypatch):
+    fake_results = [CodeSearchResult(
+        chunk_id="c1", source_path="main.py", start_line=1, end_line=10,
+        chunk_kind="function", owner_semantic_key="func1",
+        display_text="def greet():", text_score=0.9, semantic_score=0.8,
+        combined_score=0.85, match_source="hybrid",
+    )]
+    class _FakeQS:
+        def __init__(self, root): self.root = root
+        def search_code(self, query, limit, mode): return fake_results
+    monkeypatch.setattr("fcode.mcp_server.server.QueryService", _FakeQS)
+    server = _make_server()
+    result_str = server._tool_manager._tools["hybrid_search"].fn(
+        repository_root="/fake", query="greet", limit=10)
+    data = json.loads(result_str)
+    assert data[0]["chunk_id"] == "c1"
+    assert data[0]["source_path"] == "main.py"
+    assert data[0]["start_line"] == 1
+    assert data[0]["end_line"] == 10
+    assert data[0]["chunk_kind"] == "function"
+    assert data[0]["owner_semantic_key"] == "func1"
+    assert data[0]["text_score"] == 0.9
+    assert data[0]["semantic_score"] == 0.8
+    assert data[0]["combined_score"] == 0.85
+    assert data[0]["match_source"] == "hybrid"
+
+
+def test_hybrid_search_degraded_text_only_no_semantic(monkeypatch):
+    fake_results = [CodeSearchResult(
+        chunk_id="c2", source_path="util.py", start_line=5, end_line=15,
+        chunk_kind="function", owner_semantic_key="util_func",
+        display_text="def util():", text_score=0.85, semantic_score=None,
+        combined_score=0.85, match_source="text",
+    )]
+    class _FakeQS:
+        def __init__(self, root): self.root = root
+        def search_code(self, query, limit, mode): return fake_results
+    monkeypatch.setattr("fcode.mcp_server.server.QueryService", _FakeQS)
+    server = _make_server()
+    result_str = server._tool_manager._tools["hybrid_search"].fn(
+        repository_root="/fake", query="util", limit=10)
+    data = json.loads(result_str)
+    assert all(r["match_source"] == "text" for r in data)
+    assert all(r["semantic_score"] is None for r in data)
+
+
+def test_hybrid_search_qs_error_propagates(monkeypatch):
+    class _FakeQS:
+        def __init__(self, root): self.root = root
+        def search_code(self, query, limit, mode):
+            raise QueryValidationError("Semantic search is unavailable.")
+    monkeypatch.setattr("fcode.mcp_server.server.QueryService", _FakeQS)
+    server = _make_server()
+    with pytest.raises(QueryValidationError):
+        server._tool_manager._tools["hybrid_search"].fn(
+            repository_root="/fake", query="greet", limit=10)
