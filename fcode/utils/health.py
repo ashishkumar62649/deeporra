@@ -33,7 +33,7 @@ def check_required_imports() -> DoctorCheck:
         return DoctorCheck(
             name="required_imports",
             passed=False,
-            message=f"missing: {', '.join(missing)}",
+            message=f"missing: {', '.join(missing)} (interpreter: {sys.executable})",
             severity=DiagnosticSeverity.ERROR,
         )
     return DoctorCheck(
@@ -62,11 +62,11 @@ def check_local_embedding_model() -> DoctorCheck:
         from fcode.embeddings import EmbeddingEncoder
 
         EmbeddingEncoder().ensure_available()
-    except Exception:
+    except Exception as exc:
         return DoctorCheck(
             "local_embedding_model",
             False,
-            "Local embedding model is unavailable (download it before indexing).",
+            f"Local embedding model is unavailable: {type(exc).__name__}",
             DiagnosticSeverity.ERROR,
         )
     return DoctorCheck(

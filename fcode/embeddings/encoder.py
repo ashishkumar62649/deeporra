@@ -218,8 +218,8 @@ class EmbeddingEncoder:
         except Exception as exc:
             raise EmbeddingEncoderError(
                 ErrorCode.EMBEDDING_MODEL_UNAVAILABLE,
-                "model unavailable locally",
-            )
+                f"model unavailable locally: {type(exc).__name__}",
+            ) from exc
         finally:
             if old_hub is None:
                 os.environ.pop("HF_HUB_OFFLINE", None)

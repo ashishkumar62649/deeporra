@@ -1,6 +1,7 @@
 """Offline doctor readiness checks."""
 
 import socket
+import sys
 
 from typer.testing import CliRunner
 
@@ -28,16 +29,32 @@ def test_missing_chromadb_is_actionable(monkeypatch):
     assert not check.passed and "chromadb" in check.message
 
 
-def test_missing_local_model_is_offline_and_sanitized(monkeypatch):
+def test_missing_local_model_reports_exception_type(monkeypatch):
     class Encoder:
         def ensure_available(self):
             raise RuntimeError("C:/private/cache/token")
     monkeypatch.setattr("fcode.embeddings.EmbeddingEncoder", Encoder)
-    monkeypatch.setattr(socket, "create_connection", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("network")))
     check = health.check_local_embedding_model()
     assert not check.passed
     assert "Local embedding model is unavailable" in check.message
+    assert "RuntimeError" in check.message
     assert "private" not in check.message
+
+
+def test_required_imports_includes_interpreter(monkeypatch):
+    monkeypatch.setattr(health.importlib, "import_module", lambda name: (_ for _ in ()).throw(ImportError()) if name == "sentence_transformers" else object())
+    check = health.check_required_imports()
+    assert "interpreter:" in check.message
+    assert sys.executable in check.message
+
+
+def test_local_model_error_includes_type(monkeypatch):
+    class Encoder:
+        def ensure_available(self):
+            raise ValueError("something broke")
+    monkeypatch.setattr("fcode.embeddings.EmbeddingEncoder", Encoder)
+    check = health.check_local_embedding_model()
+    assert "ValueError" in check.message
 
 
 def test_fts_unavailable_is_reported(monkeypatch):
