@@ -124,6 +124,70 @@ def test_test_symbol_ignored():
     assert len(result.nodes) >= 1
 
 
+def test_ordinary_function_keeps_function_graph_identity():
+    fn = _sym(
+        "helper",
+        SymbolType.FUNCTION,
+        symbol_id="function:mod.py:helper:2",
+        start_line=2,
+    )
+    pf = _pf("mod.py")
+    pf.symbols.append(fn)
+    result = build([pf])
+    function_nodes = [node for node in result.nodes if node.node_type == GraphNodeType.FUNCTION]
+    assert [node.node_id for node in function_nodes] == ["function:mod.py:helper:2"]
+
+
+def test_test_function_uses_test_graph_identity_and_file_defines_edge():
+    test_fn = _sym(
+        "test_foo",
+        SymbolType.FUNCTION,
+        symbol_id="function:test_mod.py:test_foo:3",
+        start_line=3,
+    )
+    pf = _pf("test_mod.py")
+    pf.file_type = FileType.TEST
+    pf.symbols.append(test_fn)
+    result = build([pf])
+    test_nodes = [node for node in result.nodes if node.node_type == GraphNodeType.TEST]
+    assert [node.node_id for node in test_nodes] == ["test:test_mod.py:test_foo:3"]
+    assert not [node for node in result.nodes if node.node_id == "function:test_mod.py:test_foo:3"]
+    defines = [edge for edge in result.edges if edge.relation == GraphRelation.DEFINES]
+    assert [(edge.source_node_id, edge.target_node_id) for edge in defines] == [
+        ("file:test_mod.py", "test:test_mod.py:test_foo:3")
+    ]
+
+
+def test_class_defines_each_direct_method_once_and_deterministically():
+    cls = _sym("GreetingService", SymbolType.CLASS, symbol_id="class:mod.py:GreetingService")
+    greet = _sym("greet", SymbolType.METHOD, symbol_id="method:mod.py:GreetingService.greet", parent="GreetingService")
+    audit = _sym("_audit", SymbolType.METHOD, symbol_id="method:mod.py:GreetingService._audit", parent="GreetingService")
+    pf = _pf("mod.py")
+    pf.symbols.extend([cls, greet, audit])
+
+    first = build([pf])
+    second = build([pf])
+    expected = {
+        ("class:mod.py:GreetingService", "method:mod.py:GreetingService.greet"),
+        ("class:mod.py:GreetingService", "method:mod.py:GreetingService._audit"),
+    }
+    first_edges = [
+        (edge.source_node_id, edge.target_node_id)
+        for edge in first.edges
+        if edge.relation == GraphRelation.DEFINES
+        and edge.source_node_id.startswith("class:")
+    ]
+    second_edges = [
+        (edge.source_node_id, edge.target_node_id)
+        for edge in second.edges
+        if edge.relation == GraphRelation.DEFINES
+        and edge.source_node_id.startswith("class:")
+    ]
+    assert set(first_edges) == expected
+    assert len(first_edges) == len(set(first_edges)) == 2
+    assert second_edges == first_edges
+
+
 def test_multiple_files():
     pf1 = _pf("mod1.py")
     pf1.symbols.append(_sym("foo", SymbolType.FUNCTION))
@@ -176,7 +240,7 @@ def test_tests_edge():
     result = build([pf])
     tests_edges = [e for e in result.edges if e.relation == GraphRelation.TESTS]
     assert len(tests_edges) >= 1
-    assert tests_edges[0].source_node_id == "sym:test_foo"
+    assert tests_edges[0].source_node_id == "test:test_mod.py:test_foo:1"
 
 
 def test_unresolved_tests_no_edge():

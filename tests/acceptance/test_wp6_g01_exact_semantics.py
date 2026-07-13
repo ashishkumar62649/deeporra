@@ -91,6 +91,8 @@ def _actual_static(root: Path) -> dict[str, object]:
                 continue
             key = _symbol_key(symbol, item, source_file, route_handlers)
             symbols_by_id[symbol.symbol_id] = key
+            if source_file.file_type == FileType.TEST and symbol.name.startswith("test_"):
+                symbols_by_id[f"test:{item.file_path}:{symbol.name}:{symbol.start_line}"] = key
             symbols.append(
                 {
                     "semantic_key": key,
@@ -211,6 +213,10 @@ def _actual_static(root: Path) -> dict[str, object]:
         for symbol in item.symbols:
             if symbol.symbol_type != SymbolType.ROUTE:
                 node_qualified_names[symbol.symbol_id] = symbol.qualified_name or symbol.name
+                if source_by_path[_path(item.file_path)].file_type == FileType.TEST and symbol.name.startswith("test_"):
+                    node_qualified_names[
+                        f"test:{item.file_path}:{symbol.name}:{symbol.start_line}"
+                    ] = symbol.qualified_name or symbol.name
     for node in graph.nodes:
         node_id = node.node_id
         linked = None

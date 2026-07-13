@@ -220,7 +220,11 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
                 continue
 
             base_id = sym.symbol_id or f"{sym.symbol_type.value}:{pf.file_path}:{sym.name}:{sym.start_line}"
-            node_id = base_id
+            node_id = (
+                f"test:{pf.file_path}:{sym.name}:{sym.start_line}"
+                if node_type == GraphNodeType.TEST
+                else base_id
+            )
             symbol_nodes[sym.symbol_id or base_id] = node_id
             if node_id not in symbol_by_id:
                 symbol_by_id[node_id] = sym
@@ -270,30 +274,6 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
                     confidence=Confidence.EXTRACTED,
                 ),
             )
-
-            if sym.parent_symbol_id:
-                parent_id = sym.parent_symbol_id
-                if parent_id in symbol_nodes:
-                    edges, edge_record_id_set, seen_canonical_edges = _add_edge(
-                        edges,
-                        edge_record_id_set,
-                        seen_canonical_edges,
-                        GraphEdgeInput(
-                            record_id=_edge_record_id(
-                                parent_id,
-                                GraphRelation.DEFINES,
-                                node_id,
-                                pf.file_path,
-                                f"{pf.file_path}:{sym.start_line}",
-                            ),
-                            source_node_id=parent_id,
-                            target_node_id=node_id,
-                            relation=GraphRelation.DEFINES,
-                            source_file=pf.file_path,
-                            source_location=f"{pf.file_path}:{sym.start_line}",
-                            confidence=Confidence.INFERRED,
-                        ),
-                    )
 
         for imp in pf.imports:
             identity = imp.imported_names[0] if imp.imported_names else imp.module_name
@@ -348,6 +328,9 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
                 ),
             )
 
+    _add_parent_edges(edges, edge_record_id_set, seen_canonical_edges,
+                      node_id_for_sym_id, parsed_files)
+
     # Append edges for inherits, calls, and tests. These use canonical
     # dedup so order between alphabetic and reverse doesn't matter.
     _add_inherits_edges(edges, edge_record_id_set, seen_canonical_edges, node_id_set,
@@ -368,6 +351,64 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
         node_count=len(nodes),
         edge_count=len(edges),
     )
+
+
+def _add_parent_edges(
+    edges: list[GraphEdgeInput],
+    edge_record_id_set: set[str],
+    seen_canonical_edges: set[str],
+    node_id_for_sym_id: dict[str, str],
+    parsed_files: Sequence[ParsedFile],
+) -> None:
+    for pf in parsed_files:
+        classes_by_name: dict[str, list[ParsedSymbol]] = {}
+        for sym in pf.symbols:
+            if sym.symbol_type == SymbolType.CLASS:
+                classes_by_name.setdefault(sym.name, []).append(sym)
+
+        for sym in pf.symbols:
+            if sym.symbol_type != SymbolType.METHOD:
+                continue
+            parent = None
+            if sym.parent_symbol_id:
+                parent = next(
+                    (
+                        candidate
+                        for candidate in pf.symbols
+                        if candidate.symbol_type == SymbolType.CLASS
+                        and candidate.symbol_id == sym.parent_symbol_id
+                    ),
+                    None,
+                )
+            elif sym.parent and len(classes_by_name.get(sym.parent, [])) == 1:
+                parent = classes_by_name[sym.parent][0]
+            if parent is None:
+                continue
+
+            source_node_id = node_id_for_sym_id.get(parent.symbol_id)
+            target_node_id = node_id_for_sym_id.get(sym.symbol_id)
+            if not source_node_id or not target_node_id:
+                continue
+            edges, edge_record_id_set, seen_canonical_edges = _add_edge(
+                edges,
+                edge_record_id_set,
+                seen_canonical_edges,
+                GraphEdgeInput(
+                    record_id=_edge_record_id(
+                        source_node_id,
+                        GraphRelation.DEFINES,
+                        target_node_id,
+                        pf.file_path,
+                        f"{pf.file_path}:{sym.start_line}",
+                    ),
+                    source_node_id=source_node_id,
+                    target_node_id=target_node_id,
+                    relation=GraphRelation.DEFINES,
+                    source_file=pf.file_path,
+                    source_location=f"{pf.file_path}:{sym.start_line}",
+                    confidence=Confidence.INFERRED,
+                ),
+            )
 
 
 def _node_record_id(node_id: str, node_type: GraphNodeType) -> str:

@@ -370,7 +370,7 @@ class TestGraphContract:
         result = build([pf])
         tests_edges = [e for e in result.edges if e.relation == GraphRelation.TESTS]
         assert len(tests_edges) >= 1
-        assert tests_edges[0].source_node_id == "sym:test_foo"
+        assert tests_edges[0].source_node_id == "test:test_mod.py:test_foo:1"
 
     def test_handles_route_edge(self):
         from fcode.graph.graph_builder import build
