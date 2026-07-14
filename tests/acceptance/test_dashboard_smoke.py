@@ -34,7 +34,7 @@ class TestDashboardSmoke:
     """Smoke test — starts the dashboard, confirms it binds, stops it."""
 
     def test_streamlit_launches_and_stops(self, _free_port: int, tmp_path: Path):
-        app_path = Path(__file__).parents[2] / "DeepOrra" / "dashboard" / "app.py"
+        app_path = Path(__file__).parents[2] / "deeporra" / "dashboard" / "app.py"
         assert app_path.is_file(), f"Dashboard app not found: {app_path}"
 
         proc = subprocess.Popen(

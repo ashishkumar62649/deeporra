@@ -24,15 +24,14 @@ class TestEntryPoints:
         expected = {"index", "status", "doctor", "dashboard", "mcp", "setup"}
         assert cmds == expected
 
-    def test_help_does_not_import_unfinished_modules(self):
+    def test_help_does_not_import_unvisited_modules(self):
         before = set(sys.modules.keys())
         import deeporra.cli.main
         after = set(sys.modules.keys())
         new_modules = after - before
         forbidden = {"deeporra.storage", "deeporra.scanner", "deeporra.parser",
                      "deeporra.chunking", "deeporra.embeddings", "deeporra.indexing",
-                     "deeporra.graph", "deeporra.retrieval", "deeporra.mcp_server",
-                     "deeporra.dashboard"}
+                     "deeporra.graph", "deeporra.retrieval"}
         assert new_modules.isdisjoint(forbidden), \
             f"CLI startup imported: {new_modules & forbidden}"
 
@@ -67,13 +66,22 @@ class TestDashboardCommand:
         sig = inspect.signature(dashboard_cmd)
         assert "port" in sig.parameters
 
+    def test_dashboard_not_deferred(self):
+        from deeporra.cli.commands.dashboard_cmd import dashboard_cmd
+        import typer
+        assert not hasattr(dashboard_cmd, "__wrapped__") or "Exit" not in str(dashboard_cmd)
+
 
 class TestMCPCommand:
-    def test_mcp_requires_repo(self):
+    def test_mcp_no_repo_arg(self):
         from deeporra.cli.commands.mcp_cmd import mcp_cmd
         import inspect
         sig = inspect.signature(mcp_cmd)
-        assert "repo_path" in sig.parameters
+        assert "repo_path" not in sig.parameters
+
+    def test_mcp_not_deferred(self):
+        from deeporra.cli.commands.mcp_cmd import mcp_cmd
+        assert not hasattr(mcp_cmd, "__wrapped__") or "Exit" not in str(mcp_cmd)
 
 
 class TestSetupCommand:

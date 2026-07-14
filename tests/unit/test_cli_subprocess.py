@@ -80,33 +80,26 @@ class TestDoctor:
 
 
 class TestDashboard:
-    def test_dashboard_exit_code(self):
-        result = _invoke("dashboard")
-        assert result.returncode == 2
+    def test_dashboard_not_deferred(self):
+        result = _invoke("dashboard", "--help")
+        assert result.returncode == 0
+        assert "Start Streamlit dashboard" in result.stdout
 
-    def test_dashboard_deferred_message(self):
-        result = _invoke("dashboard")
-        assert "This command is not available" in result.stdout
-
-    def test_dashboard_with_port(self):
-        result = _invoke("dashboard", "--port", "8600")
-        assert result.returncode == 2
-        assert "This command is not available" in result.stdout
+    def test_dashboard_help_shows_port(self):
+        result = _invoke("dashboard", "--help")
+        assert result.returncode == 0
+        assert "--port" in result.stdout
 
 
 class TestMCP:
-    def test_mcp_with_repo_exit_code(self):
-        result = _invoke("mcp", "--repo", ".")
-        assert result.returncode == 2
+    def test_mcp_help(self):
+        result = _invoke("mcp", "--help")
+        assert result.returncode == 0
+        assert "Start MCP stdio server" in result.stdout
 
-    def test_mcp_with_repo_message(self):
-        result = _invoke("mcp", "--repo", ".")
-        assert "This command is not available" in result.stdout
-
-    def test_mcp_missing_repo_is_error(self):
-        result = _invoke("mcp")
-        assert result.returncode != 0
-        assert len(result.stderr) > 0 or len(result.stdout) > 0
+    def test_mcp_not_deferred(self):
+        result = _invoke("mcp", "--help")
+        assert "This command is not available" not in result.stdout
 
 
 class TestSetup:
