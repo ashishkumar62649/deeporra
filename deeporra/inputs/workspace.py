@@ -1,6 +1,5 @@
 """Owned workspace lifecycle — temporary directories with safe cleanup."""
 
-import os
 import shutil
 import tempfile
 from pathlib import Path

@@ -1,6 +1,6 @@
 """Canonical error codes — DeepOrra domain errors and MCP tool errors."""
 
-from enum import Enum, auto
+from enum import Enum
 
 
 class ErrorCode(str, Enum):

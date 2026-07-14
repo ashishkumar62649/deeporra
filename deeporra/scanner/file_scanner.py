@@ -4,7 +4,6 @@ import os
 import hashlib
 
 from deeporra.contracts import (
-    Confidence,
     DiagnosticSeverity,
     ErrorCode,
     DeepOrraConfig,
@@ -55,7 +54,7 @@ def scan_repository(repo: RepoInput, config: DeepOrraConfig) -> ScanResult:
             rel_dir = ""
         dirnames[:] = [
             d for d in dirnames
-            if not _is_dir_ignored(os.path.join(dirpath, d), ignore_rules, rel_dir)
+            if not _is_dir_ignored(os.path.join(dirpath, d), ignore_rules)
         ]
 
         for filename in filenames:
@@ -75,7 +74,7 @@ def scan_repository(repo: RepoInput, config: DeepOrraConfig) -> ScanResult:
                 )
                 continue
 
-            skipped_diag, size = _skip_file_if_unsuitable(full_path, rel_path)
+            skipped_diag, _ = _skip_file_if_unsuitable(full_path, rel_path)
             if skipped_diag:
                 skipped.append(skipped_diag)
                 if skipped_diag.severity == DiagnosticSeverity.WARNING and skipped_diag.reason == "file_skipped":
@@ -216,7 +215,7 @@ def scan_repository(repo: RepoInput, config: DeepOrraConfig) -> ScanResult:
     )
 
 
-def _is_dir_ignored(dir_path: str, rules: IgnoreRules, rel_dir: str) -> bool:
+def _is_dir_ignored(dir_path: str, rules: IgnoreRules) -> bool:
     name = os.path.basename(dir_path)
     if name in HARDCODED_IGNORED_DIRS:
         return True

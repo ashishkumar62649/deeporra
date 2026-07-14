@@ -7,7 +7,6 @@ No shared state, no network listener, no writes.
 from __future__ import annotations
 
 import json
-import sys
 from dataclasses import asdict
 from datetime import datetime
 from enum import Enum
@@ -21,7 +20,6 @@ from deeporra.querying import (
     QueryService,
     QueryValidationError,
     RelatedNode,
-    RepositoryNotIndexedError,
     RepositorySummary,
     RouteRecord,
     SymbolRecord,

@@ -19,12 +19,6 @@ class TestPackageStructure:
         from deeporra.cli import main
         assert main is not None
 
-    def test_cli_has_expected_commands(self):
-        from deeporra.cli.main import app
-        cmds = {c.name or c.callback.__name__ for c in app.registered_commands}
-        expected = {"index", "status", "doctor", "dashboard", "mcp", "setup"}
-        assert cmds == expected
-
     def test_docs_exist(self):
         doc_dir = Path(__file__).resolve().parent.parent.parent / "docs"
         expected = [

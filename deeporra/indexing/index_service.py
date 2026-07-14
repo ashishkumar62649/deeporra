@@ -230,7 +230,7 @@ class IndexService:
             diagnostics.append(diag)
             compat_errors.append(compat)
             fatal = self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR, None
+                sm, diagnostics, compat_errors, None
             )
             return _AttemptScaffolding(
                 sm=None, diagnostics=diagnostics,
@@ -285,7 +285,7 @@ class IndexService:
             diagnostics.append(diag)
             compat_errors.append(diag.message)
             return self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR, scan_result=None
+                sm, diagnostics, compat_errors, scan_result=None
             )
 
         scan_validation = self._validate_scan_result(scan_result, self._att_config)
@@ -294,7 +294,7 @@ class IndexService:
             diagnostics.append(diag)
             compat_errors.append(compat)
             return self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR,
+                sm, diagnostics, compat_errors,
                 scan_result=scan_result,
             )
 
@@ -328,7 +328,7 @@ class IndexService:
                 diagnostics.append(diag)
                 compat_errors.append(diag.message)
                 return self._build_fatal(
-                    sm, diagnostics, compat_errors, IndexState.ERROR,
+                    sm, diagnostics, compat_errors,
                     scan_result=scan_result, parsed_files=parsed_files,
                 )
 
@@ -338,7 +338,7 @@ class IndexService:
                 diagnostics.append(diag)
                 compat_errors.append(compat)
                 return self._build_fatal(
-                    sm, diagnostics, compat_errors, IndexState.ERROR,
+                    sm, diagnostics, compat_errors,
                     scan_result=scan_result, parsed_files=parsed_files,
                 )
 
@@ -377,7 +377,7 @@ class IndexService:
             diagnostics.append(diag)
             compat_errors.append(diag.message)
             return self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR,
+                sm, diagnostics, compat_errors,
                 scan_result=scan_result, parsed_files=parsed_files,
             )
 
@@ -387,7 +387,7 @@ class IndexService:
             diagnostics.append(diag)
             compat_errors.append(compat)
             return self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR,
+                sm, diagnostics, compat_errors,
                 scan_result=scan_result, parsed_files=parsed_files,
             )
 
@@ -464,7 +464,7 @@ class IndexService:
             diagnostics.append(diag)
             compat_errors.append(compat)
             return self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR,
+                sm, diagnostics, compat_errors,
                 scan_result=scan_result, parsed_files=parsed_files,
             )
 
@@ -488,7 +488,7 @@ class IndexService:
             diagnostics.append(diag)
             compat_errors.append(diag.message)
             return self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR,
+                sm, diagnostics, compat_errors,
                 scan_result=scan_result, parsed_files=parsed_files,
                 chunks=chunks,
             )
@@ -504,7 +504,7 @@ class IndexService:
             diagnostics.append(diag)
             compat_errors.append(diag.message)
             return self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR,
+                sm, diagnostics, compat_errors,
                 scan_result=scan_result, parsed_files=parsed_files,
                 chunks=chunks,
             )
@@ -523,7 +523,7 @@ class IndexService:
                     diagnostics.append(diag)
                     compat_errors.append(compat)
                     return self._build_fatal(
-                        sm, diagnostics, compat_errors, IndexState.ERROR,
+                        sm, diagnostics, compat_errors,
                         scan_result=scan_result, parsed_files=parsed_files,
                         chunks=chunks, embedding_result=embedding_result,
                     )
@@ -541,7 +541,7 @@ class IndexService:
                     diagnostics.append(diag)
                     compat_errors.append(diag.message)
                     return self._build_fatal(
-                        sm, diagnostics, compat_errors, IndexState.ERROR,
+                        sm, diagnostics, compat_errors,
                         scan_result=scan_result, parsed_files=parsed_files,
                         chunks=chunks, embedding_result=embedding_result,
                     )
@@ -551,7 +551,7 @@ class IndexService:
                 diagnostics.append(diag)
                 compat_errors.append(diag.message)
                 return self._build_fatal(
-                    sm, diagnostics, compat_errors, IndexState.ERROR,
+                    sm, diagnostics, compat_errors,
                     scan_result=scan_result, parsed_files=parsed_files,
                     chunks=chunks,
                 )
@@ -562,7 +562,7 @@ class IndexService:
             diagnostics.append(diag)
             compat_errors.append(compat)
             return self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR,
+                sm, diagnostics, compat_errors,
                 scan_result=scan_result, parsed_files=parsed_files,
                 chunks=chunks, embedding_result=embedding_result,
             )
@@ -581,7 +581,7 @@ class IndexService:
             diagnostics.append(diag)
             compat_errors.append(diag.message)
             return self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR,
+                sm, diagnostics, compat_errors,
                 scan_result=scan_result, parsed_files=parsed_files,
                 chunks=chunks, embedding_result=embedding_result,
             )
@@ -624,18 +624,18 @@ class IndexService:
             counts.graph_nodes = 0
             counts.graph_edges = 0
             return self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR,
+                sm, diagnostics, compat_errors,
                 scan_result=scan_result, parsed_files=parsed_files,
                 chunks=chunks, embedding_result=embedding_result,
             )
 
-        graph_valid = self._validate_graph_result(graph_result, scan_result)
+        graph_valid = self._validate_graph_result(graph_result)
         if graph_valid is not None:
             diag, compat = graph_valid
             diagnostics.append(diag)
             compat_errors.append(compat)
             return self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR,
+                sm, diagnostics, compat_errors,
                 scan_result=scan_result, parsed_files=parsed_files,
                 chunks=chunks, embedding_result=embedding_result,
             )
@@ -706,7 +706,7 @@ class IndexService:
             diagnostics.append(diag)
             compat_errors.append(diag.message)
             return self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR,
+                sm, diagnostics, compat_errors,
                 scan_result=scan_result, parsed_files=parsed_files,
                 chunks=chunks, embedding_result=embedding_result,
             )
@@ -725,7 +725,7 @@ class IndexService:
             diagnostics.append(diag)
             compat_errors.append(diag.message)
             return self._build_fatal(
-                sm, diagnostics, compat_errors, IndexState.ERROR,
+                sm, diagnostics, compat_errors,
                 scan_result=scan_result, parsed_files=parsed_files,
                 chunks=chunks, embedding_result=embedding_result,
                 graph_result=graph_result,
@@ -1278,7 +1278,6 @@ class IndexService:
     @staticmethod
     def _validate_graph_result(
         result: GraphBuildResult,
-        scan_result: ScanResult,
     ) -> Optional[tuple[IndexDiagnostic, str]]:
         if not isinstance(result, GraphBuildResult):
             d = IndexDiagnostic(
@@ -1290,7 +1289,6 @@ class IndexService:
             )
             return d, d.message
 
-        scanned_paths = {sf.file_path for sf in scan_result.files}
         nodes = result.nodes
         edges = result.edges
 
@@ -1574,7 +1572,6 @@ class IndexService:
         sm: IndexStateMachine,
         diagnostics: list[IndexDiagnostic],
         compat_errors: list[str],
-        final_state: IndexState,
         scan_result: Optional[ScanResult],
         parsed_files: Optional[list[ParsedFile]] = None,
         chunks: Optional[list[CodeChunk]] = None,

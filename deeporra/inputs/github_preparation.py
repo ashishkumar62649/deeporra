@@ -3,13 +3,11 @@
 import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 from deeporra.inputs.errors import (
     GitCloneError,
     GitUnavailableError,
-    RepositorySourceNotFoundError,
     UnsupportedRepositoryUrlError,
 )
 from deeporra.inputs.models import InputKind, PreparedRepository

@@ -19,7 +19,6 @@ def extract_imports(tree: ast.AST, file_path: str) -> Generator[ParsedImport, No
                 )
         elif isinstance(node, ast.ImportFrom):
             module = node.module or ""
-            names = [alias.asname or alias.name for alias in node.names]
             for alias in node.names:
                 yield ParsedImport(
                     module_name=module,

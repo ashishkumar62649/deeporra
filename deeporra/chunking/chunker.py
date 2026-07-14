@@ -8,7 +8,6 @@ It never reopens original repository files.
 import hashlib
 import re
 import uuid
-from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence
 
 from deeporra.contracts.enums import ChunkType, FileType, ParseStatus, SymbolType
@@ -35,7 +34,6 @@ class Chunker:
     ) -> list[CodeChunk]:
         self._validate_inputs(scanned_files, parsed_files)
 
-        scanned_by_id = {sf.file_id: sf for sf in scanned_files}
         parsed_by_id = {pf.file_id: pf for pf in parsed_files}
 
         chunks: list[CodeChunk] = []
@@ -190,15 +188,9 @@ class Chunker:
         if has_parse_error or pf is None:
             return chunks
 
-        symbol_by_id = {s.symbol_id: s for s in pf.symbols}
-        skip_symbol_ids: set[str] = set()
-
         route_symbol_ids = {r.route_id for r in pf.routes}
 
         for sym in pf.symbols:
-            if sym.symbol_id in skip_symbol_ids:
-                continue
-
             if sym.symbol_type == SymbolType.VARIABLE:
                 continue
 
@@ -221,7 +213,7 @@ class Chunker:
                 chunks.append(chunk)
 
         for route in pf.routes:
-            chunk = self._make_route_chunk(sf, route, pf, symbol_by_id)
+            chunk = self._make_route_chunk(sf, route, pf)
             if chunk is not None:
                 chunks.append(chunk)
 
@@ -358,7 +350,7 @@ class Chunker:
         return "\n".join(parts)
 
     def _make_route_chunk(
-        self, sf: ScannedFile, route, pf: ParsedFile, symbol_by_id: dict
+        self, sf: ScannedFile, route, pf: ParsedFile
     ) -> Optional[CodeChunk]:
         line_count = sf.line_count or len(sf.safe_content.split("\n"))
         handler_end = line_count
@@ -432,7 +424,6 @@ class Chunker:
 
     def _split_doc_chunks(self, sf: ScannedFile, md_pattern: str) -> list[CodeChunk]:
         content = sf.safe_content
-        chunks: list[CodeChunk] = []
         lines = content.split("\n")
         is_rst = sf.file_path.lower().endswith(".rst")
 
@@ -465,7 +456,7 @@ class Chunker:
         total_lines = len(lines)
         prev_end = 0
 
-        for idx, (hdr_line, hdr_end_line, heading_text, heading_level) in enumerate(heading_spans):
+        for idx, (hdr_line, _, heading_text, heading_level) in enumerate(heading_spans):
             if prev_end < hdr_line - 1:
                 preamble = "\n".join(lines[prev_end : hdr_line - 1])
                 preamble = preamble.strip()

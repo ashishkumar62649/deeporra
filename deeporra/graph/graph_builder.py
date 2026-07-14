@@ -116,8 +116,6 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
     # Nodes seen in deterministic construction order to make edge endpoints
     # resolvable as we append — symbol nodes that depend on later symbol
     # IDs are normalised below.
-    pending_handler_subs: list[tuple[int, str]] = []
-
     for pf in parsed_files:
         file_node_id = f"file:{pf.file_path}"
         nodes, node_id_set, node_record_id_set, seen_canonical_nodes = _add_node(
@@ -212,8 +210,6 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
                     ),
                 )
 
-        symbol_nodes: dict[str, str] = {}
-
         for sym in pf.symbols:
             node_type = _symbol_to_node_type(sym, pf.file_type)
             if node_type is None:
@@ -225,7 +221,6 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
                 if node_type == GraphNodeType.TEST
                 else base_id
             )
-            symbol_nodes[sym.symbol_id or base_id] = node_id
             if node_id not in symbol_by_id:
                 symbol_by_id[node_id] = sym
             symbol_by_name.setdefault(sym.name, []).append(sym)
@@ -333,11 +328,11 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
 
     # Append edges for inherits, calls, and tests. These use canonical
     # dedup so order between alphabetic and reverse doesn't matter.
-    _add_inherits_edges(edges, edge_record_id_set, seen_canonical_edges, node_id_set,
+    _add_inherits_edges(edges, edge_record_id_set, seen_canonical_edges,
                          symbol_by_id, symbol_by_name, node_id_for_sym_id)
-    _add_calls_edges(edges, edge_record_id_set, seen_canonical_edges, node_id_set,
+    _add_calls_edges(edges, edge_record_id_set, seen_canonical_edges,
                        symbol_by_id, symbol_by_name, node_id_for_sym_id)
-    _add_tests_edges(edges, edge_record_id_set, seen_canonical_edges, node_id_set,
+    _add_tests_edges(edges, edge_record_id_set, seen_canonical_edges,
                        symbol_by_id, symbol_by_name, node_id_for_sym_id)
 
     _enforce_invariants(nodes, edges, node_record_id_set, edge_record_id_set, node_id_set)
@@ -540,7 +535,6 @@ def _add_inherits_edges(
     edges: list[GraphEdgeInput],
     edge_record_id_set: set[str],
     seen_canonical_edges: set[str],
-    node_id_set: set[str],
     symbol_by_id: dict[str, ParsedSymbol],
     symbol_by_name: dict[str, list[ParsedSymbol]],
     node_id_for_sym_id: dict[str, str],
@@ -586,7 +580,6 @@ def _add_calls_edges(
     edges: list[GraphEdgeInput],
     edge_record_id_set: set[str],
     seen_canonical_edges: set[str],
-    node_id_set: set[str],
     symbol_by_id: dict[str, ParsedSymbol],
     symbol_by_name: dict[str, list[ParsedSymbol]],
     node_id_for_sym_id: dict[str, str],
@@ -632,7 +625,6 @@ def _add_tests_edges(
     edges: list[GraphEdgeInput],
     edge_record_id_set: set[str],
     seen_canonical_edges: set[str],
-    node_id_set: set[str],
     symbol_by_id: dict[str, ParsedSymbol],
     symbol_by_name: dict[str, list[ParsedSymbol]],
     node_id_for_sym_id: dict[str, str],

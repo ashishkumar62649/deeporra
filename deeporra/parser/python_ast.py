@@ -3,13 +3,11 @@
 import ast
 
 from deeporra.contracts import (
-    Confidence,
     ParseStatus,
     ParsedFile,
     ParsedRoute,
     ParsedSymbol,
     ScannedFile,
-    SymbolType,
 )
 from deeporra.parser.import_extractor import extract_imports
 from deeporra.parser.route_detector import extract_routes

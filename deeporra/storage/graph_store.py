@@ -4,8 +4,6 @@ import json
 import sqlite3
 from typing import Any, Optional
 
-from deeporra.contracts.interfaces import GraphStoreProtocol
-
 
 def _json_dumps(obj: Any) -> str:
     return json.dumps(obj, ensure_ascii=False, sort_keys=True, default=str)

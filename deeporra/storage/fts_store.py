@@ -1,9 +1,8 @@
 """FTS5 keyword search — external-content FTS5 tables and LIKE fallback."""
 
 import sqlite3
-from typing import Any, Optional
+from typing import Optional
 
-from deeporra.contracts.interfaces import FTSStoreProtocol
 from deeporra.contracts.models import CodeChunk
 
 

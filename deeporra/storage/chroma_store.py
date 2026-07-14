@@ -1,9 +1,8 @@
 """Chroma vector storage — local persistent client with repository isolation."""
 
 import os
-from typing import Any, Optional
+from typing import Any
 
-from deeporra.contracts.interfaces import ChromaStoreProtocol
 from deeporra.contracts.models import EmbeddingRecord
 
 COLLECTION_NAME = "code_chunks"

@@ -7,7 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 from deeporra.dashboard.api import safe_impact, safe_related, safe_routes, safe_search, safe_summary, safe_symbols
-from deeporra.querying import QueryService, RepositoryNotIndexedError, RepositorySummary
+from deeporra.querying import QueryService, RepositoryNotIndexedError
 
 # ── Page config ──────────────────────────────────────────────────────────
 

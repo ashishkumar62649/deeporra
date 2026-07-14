@@ -10,7 +10,6 @@ modifies repository source files, or creates .deeporra when it does not exist.
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
 from pathlib import Path
 from typing import Any, Optional
@@ -21,16 +20,14 @@ from deeporra.contracts import (
     IndexCounts,
 )
 from deeporra.embeddings.encoder import (
-    EXPECTED_DIMENSION,
     EmbeddingEncoder,
     EmbeddingEncoderError,
     EmbeddingInput,
     EmbeddingMetadata,
 )
 from deeporra.indexing.full_rebuild import FullRebuildCoordinator, FullRebuildError
-from deeporra.storage.chroma_store import ChromaStore, COLLECTION_NAME
+from deeporra.storage.chroma_store import ChromaStore
 from deeporra.storage.fts_store import FTSStore
-from deeporra.storage.graph_store import GraphStore
 from deeporra.storage.sqlite_store import SQLiteStore
 
 from deeporra.querying.models import (
@@ -158,7 +155,6 @@ class QueryService:
 
             indexed_at = row.get("completed_at")
 
-            fts_enabled = False
             parsed_count = 0
             not_applicable_count = 0
             parse_error_count = 0

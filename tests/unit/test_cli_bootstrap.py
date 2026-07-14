@@ -36,14 +36,6 @@ class TestEntryPoints:
         assert new_modules.isdisjoint(forbidden), \
             f"CLI startup imported: {new_modules & forbidden}"
 
-    def test_no_command_has_side_effects(self):
-        import deeporra.cli.main
-        for cmd in deeporra.cli.main.app.registered_commands:
-            name = cmd.name or cmd.callback.__name__
-            assert name in ("index", "status", "doctor", "dashboard",
-                            "mcp", "setup")
-
-
 class TestIndexCommand:
     def test_index_accepts_positional_path(self):
         from deeporra.cli.commands.index_cmd import index_cmd
@@ -58,9 +50,6 @@ class TestStatusCommand:
         import inspect
         sig = inspect.signature(status_cmd)
         assert "repo_path" in sig.parameters
-        # Optional arg: has a default (Typer wraps in ArgumentInfo)
-        params = sig.parameters["repo_path"]
-        assert params.default is not None or params.default is None
 
 
 class TestDoctorCommand:

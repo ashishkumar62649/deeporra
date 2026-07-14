@@ -1,7 +1,6 @@
 """Entry point for python -m deeporra.mcp_server."""
 
 import asyncio
-import sys
 
 from deeporra.mcp_server import create_mcp_server
 

@@ -72,11 +72,6 @@ def _symbol_type_str(value) -> str:
     return _SYMBOL_KIND_TO_STR.get(str(raw), "function")
 
 
-def _confidence_str(value) -> str:
-    raw = getattr(value, "value", value)
-    return str(raw) if raw in ("EXTRACTED", "INFERRED", "AMBIGUOUS") else "EXTRACTED"
-
-
 def _http_method_str(method: HttpMethod) -> str:
     return getattr(method, "value", str(method))
 

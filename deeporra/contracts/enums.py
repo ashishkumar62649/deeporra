@@ -1,6 +1,6 @@
 """Canonical enumerations — shared across all DeepOrra modules."""
 
-from enum import Enum, auto
+from enum import Enum
 
 
 class IndexPhase(str, Enum):

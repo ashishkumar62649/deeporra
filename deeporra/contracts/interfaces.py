@@ -21,7 +21,6 @@ from deeporra.contracts.models import (
     RepoInput,
     ScanResult,
     ScannedFile,
-    StoredChunkRef,
 )
 
 

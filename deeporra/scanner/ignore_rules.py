@@ -65,7 +65,7 @@ class IgnoreRules:
             if self._match(pattern, rel):
                 return True
 
-        for _dir_path, patterns in self._gitignore_patterns:
+        for _, patterns in self._gitignore_patterns:
             for pattern in patterns:
                 if self._match(pattern, rel):
                     return True

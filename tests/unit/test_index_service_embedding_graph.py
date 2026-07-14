@@ -1255,7 +1255,7 @@ class TestBuildFatal:
         sm.history = ()
         sm.persistent_replacement_started = False
         result = IndexService._build_fatal(
-            sm, [], [], IndexState.ERROR, scan_result=None,
+            sm, [], [], scan_result=None,
             chunks=[_make_chunk()],
         )
         assert len(result.chunks) == 1
@@ -1270,7 +1270,7 @@ class TestBuildFatal:
         sm.persistent_replacement_started = False
         emb = _make_batch_result(eligible=1, success=0, fail=1, skipped=0)
         result = IndexService._build_fatal(
-            sm, [], [], IndexState.ERROR, scan_result=None,
+            sm, [], [], scan_result=None,
             chunks=[], embedding_result=emb,
         )
         assert result.embedding_result is not None

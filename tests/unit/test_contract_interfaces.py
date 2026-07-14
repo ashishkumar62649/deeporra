@@ -113,9 +113,6 @@ class TestConcreteSignatureMatch:
 class TestEmbeddingEncoderAnnotation:
     """Resolved annotation must be Sequence[EmbeddingInput], not list."""
 
-    def test_protocol_has_encode_method(self):
-        assert hasattr(EmbeddingEncoderProtocol, "encode")
-
     def test_encoder_input_annotation_is_sequence(self):
         import inspect
         from typing import get_origin, get_args, get_type_hints

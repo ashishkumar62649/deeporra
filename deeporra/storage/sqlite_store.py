@@ -6,7 +6,6 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from deeporra.contracts.interfaces import SQLiteStoreProtocol
 from deeporra.contracts.models import IndexRunResult, IndexStatusRecord
 from deeporra.storage.migrations.v001_initial import apply as apply_v001
 from deeporra.storage.migrations.v002_status_counts import COUNT_COLUMNS, SCHEMA_VERSION, apply as apply_v002
@@ -350,7 +349,7 @@ class SQLiteStore:
         ).fetchone()
         if row is None:
             return None
-        from deeporra.contracts.enums import IndexState, IndexPhase
+        from deeporra.contracts.enums import IndexState
         from deeporra.contracts.models import IndexCounts
         d = dict(row)
         counts = IndexCounts(
