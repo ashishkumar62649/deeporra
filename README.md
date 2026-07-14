@@ -246,7 +246,7 @@ A changelog will be added before the v0.1.0 release.
 
 ## License
 
-DeepOrra is planned for release under the MIT License. The complete `LICENSE` file will be added before v0.1.0 is published.
+DeepOrra is licensed under the [MIT License](LICENSE).
 
 ---
 
