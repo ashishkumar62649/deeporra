@@ -1,6 +1,6 @@
 <p align="center">
   <img
-    src="docs/assets/deeporra-logo.png"
+    src="https://raw.githubusercontent.com/ashishkumar62649/deeporra/main/docs/assets/deeporra-logo.png"
     alt="DeepOrra — Repository Intelligence"
     width="600"
   >
@@ -67,6 +67,12 @@ python -m deeporra index /path/to/repo
 
 # View index status
 python -m deeporra status /path/to/repo
+
+# Start the MCP stdio server
+python -m deeporra.mcp_server
+
+# Start the Streamlit dashboard
+python -m deeporra.dashboard
 ```
 
 If the package console script is on your PATH, you can also use `deeporra` directly:
@@ -75,6 +81,8 @@ If the package console script is on your PATH, you can also use `deeporra` direc
 deeporra doctor /path/to/repo
 deeporra index /path/to/repo
 deeporra status /path/to/repo
+deeporra mcp --repo /path/to/repo
+deeporra dashboard --port 8501
 ```
 
 Before indexing, install the embedding model:
@@ -113,9 +121,11 @@ Runs offline health checks: Python version, required imports, SQLite FTS5 availa
 
 ## MCP Server
 
-The read-only MCP stdio server provides planning tools for AI coding agents. In v0.1.0, launch this component through its Python module:
+The read-only MCP stdio server provides planning tools for AI coding agents. Launch it using either the CLI command or the module entry point:
 
 ```bash
+deeporra mcp --repo /path/to/repo
+# or
 python -m deeporra.mcp_server
 ```
 
@@ -138,15 +148,19 @@ MCP tools do not modify or delete repository source files. Once the dependencies
 
 ## Streamlit Dashboard
 
-In v0.1.0, launch this component through its Python module:
+Launch the dashboard using either the CLI command or the module entry point:
 
 ```bash
+deeporra dashboard --port 8501
+# or
 python -m deeporra.dashboard
 ```
 
 Opens a local Streamlit app on `localhost:8501` (default). The dashboard provides human inspection of an indexed repository: overview stats, code search, symbol lookup, route browsing, related-code exploration, and change impact analysis.
 
 ## Architecture
+
+The indexing pipeline consists of six phases: scan (discover files, apply ignore rules, detect secrets), parse (extract symbols, imports, routes from Python AST), chunk (build searchable code fragments), embed (encode with local Sentence Transformers), build graph (capture file–symbol, import, and route relationships), and persist (write atomically to SQLite, FTS5, Chroma, and graph stores). QueryService unifies reads across all stores for the CLI, MCP server, and dashboard.
 
 ```mermaid
 flowchart TD
@@ -192,8 +206,8 @@ DeepOrra runs entirely on your laptop:
 ## Requirements
 
 - Python 3.10+ with SQLite FTS5 support. Run `python -m deeporra doctor` to verify your environment.
-- Required: typer, rich, chromadb, sentence-transformers, pydantic, python-dotenv
-- Optional: streamlit (dashboard), mcp (MCP stdio server), tree-sitter + tree-sitter-python (multi-language parsing, deferred to a later release)
+- Required: typer, rich, chromadb, sentence-transformers, pydantic, python-dotenv, typing-extensions, mcp, streamlit
+- Optional: tree-sitter + tree-sitter-python (multi-language parsing, deferred to a later release)
 
 ## Current Limitations
 
@@ -238,15 +252,15 @@ Contributions are welcome. See the development section above and the documentati
 
 ## Security
 
-Please do not report security vulnerabilities through public GitHub issues. Private reporting instructions will be provided in SECURITY.md before the public release.
+Please do not report security vulnerabilities through public GitHub issues. See [SECURITY.md](SECURITY.md) for private reporting instructions.
 
 ## Changelog
 
-A changelog will be added before the v0.1.0 release.
+See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
 ## License
 
-DeepOrra is licensed under the [MIT License](LICENSE).
+DeepOrra is licensed under the [MIT License](https://github.com/ashishkumar62649/deeporra/blob/main/LICENSE).
 
 ---
 
