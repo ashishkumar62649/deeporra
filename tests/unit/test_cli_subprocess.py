@@ -133,11 +133,19 @@ class TestConsoleScript:
     """Test that `deeporra --help` works when the console script exists in the project venv."""
 
     def test_deeporra_command_works(self):
-        scripts_dir = Path(sys.executable).parent
+        import sysconfig
+        import importlib.metadata as md
+        scripts_dir = Path(sysconfig.get_path("scripts"))
         deeporra_exe = scripts_dir / "deeporra.exe"
         if not deeporra_exe.exists():
             deeporra_exe = scripts_dir / "deeporra"
-        assert deeporra_exe.exists(), f"deeporra console script not found in {scripts_dir}"
+        assert deeporra_exe.exists(), (
+            f"deeporra console script not found in {scripts_dir}\n"
+            f"  sys.executable: {sys.executable}\n"
+            f"  sys.prefix:     {sys.prefix}\n"
+            f"  entry points:   {[ep for ep in md.entry_points(group='console_scripts') if ep.name == 'deeporra']}\n"
+            f"  shutil.which:   {shutil.which('deeporra')}"
+        )
         result = subprocess.run(
             [str(deeporra_exe), "--help"],
             capture_output=True,

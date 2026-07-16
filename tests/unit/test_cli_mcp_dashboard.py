@@ -1,8 +1,12 @@
 """Focused tests for MCP and dashboard CLI commands – delegation, port, safety."""
 
 import json
+import os
+import signal
+import socket
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -92,13 +96,46 @@ class TestDashboardCLI:
         assert "--port" in result.stdout
 
     def test_dashboard_module_entry_preserved(self):
+        port = self._free_port()
         proc = subprocess.Popen(
-            [sys.executable, "-m", "deeporra.dashboard"],
+            [sys.executable, "-m", "deeporra.dashboard", "--port", str(port)],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
+        out = []
+        err = []
+        def _read_stream(stream, target):
+            try:
+                data = stream.read()
+                target.append(data.decode("utf-8", errors="replace"))
+            except (ValueError, OSError):
+                pass
+        tout = threading.Thread(target=_read_stream, args=(proc.stdout, out))
+        terr = threading.Thread(target=_read_stream, args=(proc.stderr, err))
+        tout.start()
+        terr.start()
         try:
-            out, err = proc.communicate(timeout=5)
+            proc.wait(timeout=10)
         except subprocess.TimeoutExpired:
             proc.kill()
-            out, err = proc.communicate(timeout=5)
-        assert proc.returncode in (0, 1, -15), f"exit: {proc.returncode}"
+        proc.stdout.close()
+        proc.stderr.close()
+        tout.join(timeout=5)
+        terr.join(timeout=5)
+        full_out = "".join(out)
+        full_err = "".join(err)
+        started = "Uvicorn server started" in full_err or "You can now view" in full_out
+        assert started, (
+            f"Dashboard did not confirm startup\n"
+            f"stdout: {full_out[:500]}\n"
+            f"stderr: {full_err[:500]}\n"
+            f"exit:   {proc.returncode}"
+        )
+        assert f":{port}" in full_out or f":{port}" in full_err, (
+            f"Requested port {port} not reflected in output"
+        )
+
+    @staticmethod
+    def _free_port() -> int:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("127.0.0.1", 0))
+            return s.getsockname()[1]
