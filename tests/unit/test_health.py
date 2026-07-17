@@ -30,6 +30,8 @@ def test_missing_chromadb_is_actionable(monkeypatch):
 
 
 def test_missing_local_model_reports_exception_type(monkeypatch):
+    monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
+    monkeypatch.delenv("TRANSFORMERS_OFFLINE", raising=False)
     class Encoder:
         def ensure_available(self):
             raise RuntimeError("C:/private/cache/token")
@@ -49,6 +51,8 @@ def test_required_imports_includes_interpreter(monkeypatch):
 
 
 def test_local_model_error_includes_type(monkeypatch):
+    monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
+    monkeypatch.delenv("TRANSFORMERS_OFFLINE", raising=False)
     class Encoder:
         def ensure_available(self):
             raise ValueError("something broke")
