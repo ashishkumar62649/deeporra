@@ -15,6 +15,7 @@
   <img alt="DeepOrra 0.1.0" src="https://img.shields.io/badge/DeepOrra-0.1.0-purple">
   <img alt="Local-first" src="https://img.shields.io/badge/local--first-yellow">
   <img alt="MCP: 8 tools" src="https://img.shields.io/badge/MCP-8%20tools-green">
+  <img alt="CI" src="https://github.com/ashishkumar62649/deeporra/actions/workflows/ci.yml/badge.svg">
 </p>
 
 ---
