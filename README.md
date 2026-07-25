@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <em>Local repository intelligence for developers and AI coding agents.</em>
+  <em>Local-first repository intelligence for developers and AI coding agents.</em>
 </p>
 
 <p align="center">
