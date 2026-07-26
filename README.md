@@ -30,6 +30,7 @@ DeepOrra indexes a local Python repository and makes its structure, symbols, rou
 
 - [Quick Start](#quick-start)
 - [MCP Server](#mcp-server)
+- [Dashboard](#dashboard)
 - [Architecture](#architecture)
 - [Privacy](#privacy)
 - [Development](#development)
