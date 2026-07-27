@@ -40,7 +40,7 @@ DeepOrra indexes a local Python repository and makes its structure, symbols, rou
 
 ## Why DeepOrra
 
-Coding agents working on unfamiliar repositories often write code that already exists. They lack local, structured knowledge of the codebase. DeepOrra fills that gap: it scans, parses, chunks, embeds, and graphs a repository on your machine, then exposes that intelligence through query tools that agents can use at planning time.
+Coding agents working on unfamiliar repositories often write code that already exists. They lack local, structured knowledge of the codebase. DeepOrra fills that gap: it scans, parses, chunks, embeds, and graphs a repository on your machine, then exposes that intelligence through query tools agents can use at planning time.
 
 DeepOrra does not upload indexed source code to hosted services. After the dependencies and embedding model are installed, local indexing and querying can run offline. First-time model installation and GitHub repository input require network access.
 
