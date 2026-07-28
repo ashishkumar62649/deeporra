@@ -53,7 +53,7 @@ DeepOrra does not upload indexed source code to hosted services. After the depen
 - **Code graph** — relationships between files, symbols, imports, routes, and tests
 - **Read-only MCP server** — 8 planning tools for AI coding agents
 - **Streamlit dashboard** — human inspection of indexed repositories
-- **Secret handling** — sensitive files are excluded and detected secrets are redacted according to DeepOrra's scanner rules
+- **Secret handling** — sensitive files are excluded and detected secrets are redacted per DeepOrra's scanner rules
 
 ## Status
 
