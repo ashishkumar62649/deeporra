@@ -299,7 +299,7 @@ DeepOrra is licensed under the [MIT License](https://github.com/ashishkumar62649
 
 ## Project Status
 
-DeepOrra is in early development (v0.1.0). The indexing pipeline, CLI commands, MCP server, and dashboard are functional but the API and data format may change in breaking ways before 1.0.0. Test thoroughly before relying on persisted indexes across versions.
+DeepOrra is in early development (v0.1.0). The indexing pipeline, CLI commands, MCP server, and dashboard are functional, but the API and data format may change in breaking ways before 1.0.0. Test thoroughly before relying on persisted indexes across versions.
 
 ---
 
