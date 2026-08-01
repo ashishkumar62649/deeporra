@@ -106,7 +106,7 @@ deeporra mcp --repo /path/to/repo
 deeporra dashboard --port 8501
 ```
 
-Before indexing, install the embedding model:
+Before indexing, install the embedding model locally:
 
 ```bash
 python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
