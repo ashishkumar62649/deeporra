@@ -101,29 +101,14 @@ Do not start work until this declaration is complete.
 
 ## 9. Documentation Update Rules
 
-After completing any implementation work, the agent must update the relevant doc if:
-
-- A tool schema changed → update `06_MCP_TOOLS_CONTRACT.md`
-- A database table changed → update `04_DATA_MODEL.md`
-- A new CLI command was added → update `03_SYSTEM_ARCHITECTURE.md`
-- A new page was added → update `07_DASHBOARD_SPEC.md`
-- A new scenario was discovered → update `08_SCENARIOS_AND_ACCEPTANCE_TESTS.md`
-- A work package boundary changed → update `09_AGENT_TASKS.md`
+Update the relevant doc when implementation changes it: tool schema → `06_MCP_TOOLS_CONTRACT.md`; database tables → `04_DATA_MODEL.md`; CLI commands → `03_SYSTEM_ARCHITECTURE.md`; dashboard pages → `07_DASHBOARD_SPEC.md`; new scenarios → `08_SCENARIOS_AND_ACCEPTANCE_TESTS.md`; work-package boundaries → `09_AGENT_TASKS.md`.
 
 ## 10. Minimal Change Discipline
 
-Follow these rules when implementing anything:
-
-1. Check if the requested feature already exists somewhere in the codebase.
-2. Check if an existing file/module can be extended instead of creating new ones.
-3. Check if stdlib or existing dependencies already solve the problem.
-4. Prefer modifying existing code over creating new files.
-5. Prefer extending existing classes over creating new abstractions.
-6. Generate the smallest change that works.
-7. Do not add boilerplate, wrappers, or "future-proofing."
-8. Do not add new dependencies unless absolutely necessary.
-9. Mark uncertain suggestions with a confidence level.
-10. Non-trivial logic leaves one runnable check (assert or small test).
+1. Reuse before building: the feature itself, an extendable module, stdlib, or an installed dependency — in that order.
+2. Smallest change that works: modify before creating, extend before abstracting, no boilerplate, wrappers, or "future-proofing," no new dependencies unless necessary.
+3. Mark uncertain suggestions with a confidence level.
+4. Non-trivial logic leaves one runnable check (assert or small test).
 
 ## 11. Graphify Usage Rules
 
