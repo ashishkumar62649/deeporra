@@ -19,10 +19,11 @@ def test_package_metadata_name():
 
 
 def test_package_metadata_version():
-    """Verify package metadata reports version 0.1.0."""
+    """Verify package metadata reports a PEP 440 version (not a frozen value)."""
+    import re
     from importlib.metadata import version
     ver = version("deeporra")
-    assert ver == "0.1.0"
+    assert re.match(r"^\d+\.\d+\.\d+", ver), f"unexpected version: {ver}"
 
 
 def test_module_execution_help():
