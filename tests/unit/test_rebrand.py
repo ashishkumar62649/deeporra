@@ -39,11 +39,13 @@ def test_module_execution_help():
 
 
 def test_cli_executable_help():
-    """Verify deeporra --help succeeds."""
+    """Verify the installed deeporra console script --help succeeds."""
     import shutil
-    deeporra_exe = shutil.which("deeporra")
+    # Search only this environment's Scripts dir so stale PATH entries
+    # (e.g. an old global install) cannot shadow the script under test.
+    deeporra_exe = shutil.which("deeporra", path=str(Path(sys.prefix) / "Scripts"))
     if deeporra_exe is None:
-        # Skip if not installed in PATH
+        # Skip if the console script is not installed in this environment
         return
     result = subprocess.run(
         [deeporra_exe, "--help"],
