@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Full README rewrite with architecture diagram, quick-start guide, and usage documentation
+- Pinned `mcp<2.0` so the `mcp.server.fastmcp` import path stays stable on fresh installs
 
 ---
 
