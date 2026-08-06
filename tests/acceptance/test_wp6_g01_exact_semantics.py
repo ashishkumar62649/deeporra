@@ -312,7 +312,7 @@ def _identity(collection: str, item: object) -> object:
 
 
 def assert_exact_collection(name: str, actual: list, expected: list) -> None:
-    identity = lambda item: _identity(name, item)
+    def identity(item): return _identity(name, item)
     actual_ids = [identity(item) for item in actual]
     expected_ids = [identity(item) for item in expected]
     actual_counts = Counter(actual_ids)

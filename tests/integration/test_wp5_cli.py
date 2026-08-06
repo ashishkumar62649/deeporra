@@ -17,10 +17,13 @@ from deeporra.contracts import DeepOrraConfig
 
 class _FakeSentenceTransformer:
     calls = []
+
     def __init__(self, model_name, *, device, local_files_only):
         self.calls.append((model_name, device, local_files_only))
+
     def get_sentence_embedding_dimension(self):
         return EXPECTED_DIMENSION
+
     def encode(self, texts, **_):
         return [[0.1] * EXPECTED_DIMENSION for _ in texts]
 
@@ -56,7 +59,7 @@ def test_cli_activates_full_index_and_active_status(tmp_path, monkeypatch):
     assert "chunks=" in after.output
 
     _write(repo, "beta")
-    original_upsert = ChromaStore.upsert_embeddings
+    ChromaStore.upsert_embeddings
     with monkeypatch.context() as patch:
         patch.setattr(ChromaStore, "upsert_embeddings", lambda self, *a: (_ for _ in ()).throw(RuntimeError("private failure")))
         failed = runner.invoke(app, ["index", str(repo)])
@@ -98,6 +101,7 @@ def test_status_resolves_active_pointer_once_for_one_snapshot(tmp_path, monkeypa
     from deeporra.indexing.full_rebuild import FullRebuildCoordinator
     original = FullRebuildCoordinator.active_generation
     calls = {"count": 0}
+
     def counted(self):
         calls["count"] += 1
         return original(self)

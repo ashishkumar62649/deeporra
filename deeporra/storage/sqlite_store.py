@@ -130,7 +130,7 @@ def to_file_rows(scanned_files: list[ScannedFile], parsed_files: list[ParsedFile
             "line_count": int(sf.line_count or 0),
             "content_hash": _safe_str(sf.content_hash, default=""),
             "has_secrets": 1 if getattr(sf, "has_secrets", False) else 0,
-            "parse_status": _parse_status_str(parsed.get(sf.file_id).status if sf.file_id in parsed else sf.parse_status),
+            "parse_status": _parse_status_str(parsed[sf.file_id].status if sf.file_id in parsed else sf.parse_status),
             "parse_error": (_safe_str(parsed[sf.file_id].parse_error)[:500]) if sf.file_id in parsed and parsed[sf.file_id].parse_error else None,
             "indexed_at": _utcnow(),
         })
@@ -262,9 +262,9 @@ class SQLiteStore:
     def initialize_schema(self) -> None:
         schema_ver = self._get_schema_version()
         if schema_ver is None:
-            apply_v001(self._conn)
-            apply_v002(self._conn)
-            self._conn.commit()
+            apply_v001(self.conn)
+            apply_v002(self.conn)
+            self.conn.commit()
         elif schema_ver > SCHEMA_VERSION:
             raise ValueError(
                 f"Unsupported schema version {schema_ver}. "
@@ -272,14 +272,14 @@ class SQLiteStore:
                 "Downgrade is not supported."
             )
         elif schema_ver == 1:
-            apply_v002(self._conn)
-            self._conn.commit()
+            apply_v002(self.conn)
+            self.conn.commit()
         elif schema_ver != SCHEMA_VERSION:
             raise ValueError(f"Unsupported schema version {schema_ver}.")
 
     def _get_schema_version(self) -> Optional[int]:
         try:
-            row = self._conn.execute(
+            row = self.conn.execute(
                 "SELECT version FROM schema_version ORDER BY version DESC LIMIT 1"
             ).fetchone()
             return row["version"] if row else None
@@ -292,25 +292,25 @@ class SQLiteStore:
     # ── Transaction management ──────────────────────────────────────────────
 
     def begin_transaction(self) -> None:
-        self._conn.execute("BEGIN")
+        self.conn.execute("BEGIN")
 
     def commit_transaction(self) -> None:
-        self._conn.commit()
+        self.conn.commit()
 
     def rollback_transaction(self) -> None:
-        self._conn.rollback()
+        self.conn.rollback()
 
     # ── Repository operations ───────────────────────────────────────────────
 
     def find_repository(self, path: str) -> Optional[str]:
-        row = self._conn.execute(
+        row = self.conn.execute(
             "SELECT id FROM repositories WHERE path = ?", (path,)
         ).fetchone()
         if row:
             return row["id"]
         norm_path = str(Path(path).resolve())
         if norm_path != path:
-            row = self._conn.execute(
+            row = self.conn.execute(
                 "SELECT id FROM repositories WHERE path = ?", (norm_path,)
             ).fetchone()
             return row["id"] if row else None
@@ -323,18 +323,18 @@ class SQLiteStore:
         repo_id = str(uuid.uuid4())
         now = _utcnow()
         norm_path = str(Path(path).resolve())
-        self._conn.execute(
+        self.conn.execute(
             "INSERT INTO repositories (id, path, content_hash, indexed_at) VALUES (?, ?, ?, ?)",
             (repo_id, norm_path, content_hash, now),
         )
-        self._conn.execute(
+        self.conn.execute(
             "INSERT INTO index_status (repo_id, status, started_at) VALUES (?, 'pending', ?)",
             (repo_id, now),
         )
         return repo_id
 
     def read_index_status(self, repo_id: str) -> Optional[dict]:
-        row = self._conn.execute(
+        row = self.conn.execute(
             "SELECT * FROM index_status WHERE repo_id = ?", (repo_id,)
         ).fetchone()
         return _row_to_dict(row)
@@ -343,25 +343,25 @@ class SQLiteStore:
         self, repo_id: str, path: str, content_hash: Optional[str] = None
     ) -> None:
         now = _utcnow()
-        self._conn.execute(
+        self.conn.execute(
             "UPDATE repositories SET path = ?, content_hash = ?, indexed_at = ? WHERE id = ?",
             (path, content_hash, now, repo_id),
         )
 
     def delete_repository_content(self, repo_id: str) -> None:
-        self._conn.execute("DELETE FROM chunks WHERE repo_id = ?", (repo_id,))
-        self._conn.execute("DELETE FROM symbols WHERE repo_id = ?", (repo_id,))
-        self._conn.execute("DELETE FROM files WHERE repo_id = ?", (repo_id,))
-        self._conn.execute("DELETE FROM code_nodes WHERE repo_id = ?", (repo_id,))
-        self._conn.execute("DELETE FROM code_edges WHERE repo_id = ?", (repo_id,))
-        self._conn.execute("DELETE FROM repo_reports WHERE repo_id = ?", (repo_id,))
-        self._conn.execute("DELETE FROM tool_call_logs WHERE repo_id = ?", (repo_id,))
+        self.conn.execute("DELETE FROM chunks WHERE repo_id = ?", (repo_id,))
+        self.conn.execute("DELETE FROM symbols WHERE repo_id = ?", (repo_id,))
+        self.conn.execute("DELETE FROM files WHERE repo_id = ?", (repo_id,))
+        self.conn.execute("DELETE FROM code_nodes WHERE repo_id = ?", (repo_id,))
+        self.conn.execute("DELETE FROM code_edges WHERE repo_id = ?", (repo_id,))
+        self.conn.execute("DELETE FROM repo_reports WHERE repo_id = ?", (repo_id,))
+        self.conn.execute("DELETE FROM tool_call_logs WHERE repo_id = ?", (repo_id,))
 
     # ── File operations ─────────────────────────────────────────────────────
 
     def insert_files(self, repo_id: str, files: list[dict]) -> None:
         for f in files:
-            self._conn.execute(
+            self.conn.execute(
                 """INSERT INTO files
                    (id, repo_id, path, absolute_path, language, file_type,
                     size_bytes, line_count, content_hash, has_secrets,
@@ -389,7 +389,7 @@ class SQLiteStore:
     def insert_symbols(self, repo_id: str, symbols: list[dict]) -> None:
         for s in symbols:
             metadata_str = _json_dumps(s["metadata"]) if s.get("metadata") else None
-            self._conn.execute(
+            self.conn.execute(
                 """INSERT INTO symbols
                    (id, repo_id, file_id, symbol_type, name, qualified_name,
                     start_line, end_line, signature, docstring,
@@ -416,7 +416,7 @@ class SQLiteStore:
     def insert_chunks(self, repo_id: str, chunks: list[dict]) -> None:
         for c in chunks:
             metadata_str = _json_dumps(c["metadata"]) if c.get("metadata") else None
-            self._conn.execute(
+            self.conn.execute(
                 """INSERT INTO chunks
                    (id, repo_id, file_id, symbol_id, chunk_type, content,
                     start_line, end_line, content_hash, language,
@@ -457,57 +457,57 @@ class SQLiteStore:
             updates["error_message"] = _sanitize_error(updates["error_message"])
         set_clause = ", ".join(f"{k} = ?" for k in updates)
         values = list(updates.values()) + [repo_id]
-        self._conn.execute(
+        self.conn.execute(
             f"UPDATE index_status SET {set_clause} WHERE repo_id = ?", values
         )
 
     # ── Count operations ────────────────────────────────────────────────────
 
     def count_files(self, repo_id: str) -> int:
-        row = self._conn.execute(
+        row = self.conn.execute(
             "SELECT COUNT(*) AS cnt FROM files WHERE repo_id = ?", (repo_id,)
         ).fetchone()
         return row["cnt"] if row else 0
 
     def count_symbols(self, repo_id: str) -> int:
-        row = self._conn.execute(
+        row = self.conn.execute(
             "SELECT COUNT(*) AS cnt FROM symbols WHERE repo_id = ?", (repo_id,)
         ).fetchone()
         return row["cnt"] if row else 0
 
     def count_chunks(self, repo_id: str) -> int:
-        row = self._conn.execute(
+        row = self.conn.execute(
             "SELECT COUNT(*) AS cnt FROM chunks WHERE repo_id = ?", (repo_id,)
         ).fetchone()
         return row["cnt"] if row else 0
 
     def count_graph_nodes(self, repo_id: str) -> int:
-        row = self._conn.execute(
+        row = self.conn.execute(
             "SELECT COUNT(*) AS cnt FROM code_nodes WHERE repo_id = ?", (repo_id,)
         ).fetchone()
         return row["cnt"] if row else 0
 
     def count_graph_edges(self, repo_id: str) -> int:
-        row = self._conn.execute(
+        row = self.conn.execute(
             "SELECT COUNT(*) AS cnt FROM code_edges WHERE repo_id = ?", (repo_id,)
         ).fetchone()
         return row["cnt"] if row else 0
 
     def count_vectors(self, repo_id: str) -> int:
-        row = self._conn.execute(
+        row = self.conn.execute(
             "SELECT COALESCE(SUM(total_vectors), 0) AS cnt FROM index_status WHERE repo_id = ?",
             (repo_id,),
         ).fetchone()
         return row["cnt"] if row else 0
 
     def get_chunk_ids(self, repo_id: str) -> list[str]:
-        rows = self._conn.execute(
+        rows = self.conn.execute(
             "SELECT id FROM chunks WHERE repo_id = ? ORDER BY id", (repo_id,)
         ).fetchall()
         return [row["id"] for row in rows]
 
     def foreign_key_violations(self) -> list[dict]:
-        return [dict(row) for row in self._conn.execute("PRAGMA foreign_key_check")]
+        return [dict(row) for row in self.conn.execute("PRAGMA foreign_key_check")]
 
     # ── Cleanup ─────────────────────────────────────────────────────────────
 
@@ -518,17 +518,17 @@ class SQLiteStore:
         warning_count: int = 0,
         error_count: int = 0,
     ) -> None:
-        self._conn.execute("BEGIN")
+        self.conn.execute("BEGIN")
         try:
-            self._conn.execute("DELETE FROM chunks WHERE repo_id = ?", (repo_id,))
-            self._conn.execute("DELETE FROM symbols WHERE repo_id = ?", (repo_id,))
-            self._conn.execute("DELETE FROM files WHERE repo_id = ?", (repo_id,))
-            self._conn.execute("DELETE FROM code_nodes WHERE repo_id = ?", (repo_id,))
-            self._conn.execute("DELETE FROM code_edges WHERE repo_id = ?", (repo_id,))
-            self._conn.execute("DELETE FROM repo_reports WHERE repo_id = ?", (repo_id,))
-            self._conn.execute("DELETE FROM tool_call_logs WHERE repo_id = ?", (repo_id,))
+            self.conn.execute("DELETE FROM chunks WHERE repo_id = ?", (repo_id,))
+            self.conn.execute("DELETE FROM symbols WHERE repo_id = ?", (repo_id,))
+            self.conn.execute("DELETE FROM files WHERE repo_id = ?", (repo_id,))
+            self.conn.execute("DELETE FROM code_nodes WHERE repo_id = ?", (repo_id,))
+            self.conn.execute("DELETE FROM code_edges WHERE repo_id = ?", (repo_id,))
+            self.conn.execute("DELETE FROM repo_reports WHERE repo_id = ?", (repo_id,))
+            self.conn.execute("DELETE FROM tool_call_logs WHERE repo_id = ?", (repo_id,))
             now = _utcnow()
-            self._conn.execute(
+            self.conn.execute(
                 """UPDATE index_status SET
                     status = 'error',
                     completed_at = ?,
@@ -538,9 +538,9 @@ class SQLiteStore:
                    WHERE repo_id = ?""",
                 (now, _sanitize_error(error_message), warning_count, error_count, repo_id),
             )
-            self._conn.commit()
+            self.conn.commit()
         except BaseException:
-            self._conn.rollback()
+            self.conn.rollback()
             raise
 
     # ── SQLiteStoreProtocol conformance ─────────────────────────────────────
@@ -554,7 +554,7 @@ class SQLiteStore:
             )
 
     def get_index_status(self) -> Optional[IndexStatusRecord]:
-        row = self._conn.execute(
+        row = self.conn.execute(
             "SELECT * FROM index_status LIMIT 1"
         ).fetchone()
         if row is None:
@@ -593,7 +593,7 @@ class SQLiteStore:
         if nodes:
             repo_id = nodes[0].get("repo_id", "")
             for n in nodes:
-                self._conn.execute(
+                self.conn.execute(
                     """INSERT INTO code_nodes
                        (id, repo_id, node_id, label, node_type,
                         source_file, source_location, confidence, metadata)
@@ -613,7 +613,7 @@ class SQLiteStore:
         if edges:
             repo_id = edges[0].get("repo_id", "")
             for e in edges:
-                self._conn.execute(
+                self.conn.execute(
                     """INSERT INTO code_edges
                        (id, repo_id, source_node_id, target_node_id,
                         relation, confidence, source_file, metadata)

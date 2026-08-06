@@ -43,6 +43,7 @@ class _RepoInput:
         self.skip_hidden = skip_hidden
         self.skip_binary = skip_binary
 
+
 class _Scanner:
     def scan(self, repo, config):
         return scan_repo(repo, config)
@@ -122,8 +123,8 @@ async def test_mcp_acceptance_all_tools(indexed_repo):
 
     async def client():
         init_msg = JSONRPCMessage(jsonrpc="2.0", id=1, method="initialize",
-                                   params={"protocolVersion": "2024-11-05", "capabilities": {},
-                                           "clientInfo": {"name": "test", "version": "0.1.0"}})
+                                  params={"protocolVersion": "2024-11-05", "capabilities": {},
+                                          "clientInfo": {"name": "test", "version": "0.1.0"}})
         await to_server_send.send(SessionMessage(message=init_msg))
         await anyio.sleep(0.1)
 
@@ -143,7 +144,7 @@ async def test_mcp_acceptance_all_tools(indexed_repo):
         ]
         for cid, name, args in calls:
             msg = JSONRPCMessage(jsonrpc="2.0", id=cid, method="tools/call",
-                                  params={"name": name, "arguments": args})
+                                 params={"name": name, "arguments": args})
             await to_server_send.send(SessionMessage(message=msg))
             await anyio.sleep(0.1)
 

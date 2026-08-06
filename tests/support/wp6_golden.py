@@ -1,14 +1,13 @@
 """Small WP6 fixture helpers; production boundaries stay untouched."""
 
 import hashlib
-import json
 import shutil
 import sys
 import types
 from pathlib import Path
 
 from deeporra.chunking.chunker import Chunker
-from deeporra.contracts import DeepOrraConfig, RepoInput
+from deeporra.contracts import DeepOrraConfig
 from deeporra.embeddings.encoder import EXPECTED_DIMENSION, EmbeddingEncoder
 from deeporra.graph.graph_builder import build
 from deeporra.indexing.index_service import IndexService
@@ -63,7 +62,7 @@ def copy_fixture(name: str, target: Path) -> Path:
     return destination
 
 
-def generate_repository(root: Path, *, module_count: int, functions_per_module: int, classes_per_module: int, methods_per_class: int, route_count: int, test_count: int, documentation_count: int, configuration_line_count: int, seed: int) -> dict:
+def generate_repository(root: Path, *, module_count: int, functions_per_module: int, classes_per_module: int, methods_per_class: int, route_count: int, test_count: int, documentation_count: int, configuration_line_count: int, seed: int) -> dict:  # noqa: E501  (golden fixture data)
     """Create a deterministic performance fixture and its structural formulas."""
     prefix = f"seed_{seed}"
     for module in range(module_count):
@@ -80,4 +79,4 @@ def generate_repository(root: Path, *, module_count: int, functions_per_module: 
     for index in range(documentation_count):
         (root / f"doc_{index}.md").write_text(f"# {prefix} {index}\n", encoding="utf-8")
     (root / "settings.toml").write_text("\n".join(f"line_{index} = {index}" for index in range(configuration_line_count)) + "\n", encoding="utf-8")
-    return {"files": module_count + test_count + documentation_count + 1, "functions": module_count * functions_per_module + route_count + test_count, "classes": module_count * classes_per_module, "methods": module_count * classes_per_module * methods_per_class, "routes": route_count}
+    return {"files": module_count + test_count + documentation_count + 1, "functions": module_count * functions_per_module + route_count + test_count, "classes": module_count * classes_per_module, "methods": module_count * classes_per_module * methods_per_class, "routes": route_count}  # noqa: E501  (golden fixture data)

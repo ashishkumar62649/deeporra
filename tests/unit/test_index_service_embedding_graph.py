@@ -1,7 +1,6 @@
 """Tests for IndexService.build_through_graphing — embedding and graph orchestration."""
 
 import hashlib
-import math
 from unittest.mock import MagicMock
 
 import pytest
@@ -28,7 +27,6 @@ from deeporra.contracts import (
     ScanResult,
     ScannedFile,
     FileType,
-    Confidence,
 )
 from deeporra.embeddings import EXPECTED_DIMENSION
 from deeporra.indexing.index_service import IndexService
@@ -93,7 +91,7 @@ def _make_valid_record(cid="c1", path="mod.py"):
 
 def _make_default_scan_result(files=None):
     sf = files or [_make_scanned(pid="f1", path="mod.py", parse_status=ParseStatus.PENDING,
-                                  is_binary=False, file_type=FileType.SOURCE)]
+                                 is_binary=False, file_type=FileType.SOURCE)]
     return ScanResult(
         files=sf,
         eligible_file_count=len(sf), total_count=len(sf), eligible_total_bytes=100,
@@ -210,7 +208,7 @@ class TestGraphingConfigValidation:
     def test_encoder_not_called_on_config_failure(self):
         encoder = MagicMock()
         svc = _make_default_service(encoder=encoder, graph_builder=MagicMock())
-        result = svc.build_through_graphing(DeepOrraConfig(repo_path=""))
+        svc.build_through_graphing(DeepOrraConfig(repo_path=""))
         encoder.encode.assert_not_called()
 
 
@@ -223,7 +221,7 @@ class TestGraphingStep2Failures:
         scanner.scan.side_effect = RuntimeError("boom")
         encoder = MagicMock()
         svc = _make_default_service(scanner=scanner, encoder=encoder,
-                                     graph_builder=MagicMock())
+                                    graph_builder=MagicMock())
         result = svc.build_through_graphing(DeepOrraConfig(repo_path="."))
         assert result.run_result.state == IndexState.ERROR
         encoder.encode.assert_not_called()
@@ -235,7 +233,7 @@ class TestGraphingStep2Failures:
         parser.parse.side_effect = ValueError("crash")
         encoder = MagicMock()
         svc = _make_default_service(scanner=scanner, parser=parser,
-                                     encoder=encoder, graph_builder=MagicMock())
+                                    encoder=encoder, graph_builder=MagicMock())
         result = svc.build_through_graphing(DeepOrraConfig(repo_path="."))
         assert result.run_result.state == IndexState.ERROR
         encoder.encode.assert_not_called()
@@ -246,8 +244,8 @@ class TestGraphingStep2Failures:
         chunker.chunk.side_effect = RuntimeError("chunk crash")
         encoder = MagicMock()
         svc = _make_default_service(scanner=scanner, parser=parser,
-                                     chunker=chunker, encoder=encoder,
-                                     graph_builder=MagicMock())
+                                    chunker=chunker, encoder=encoder,
+                                    graph_builder=MagicMock())
         result = svc.build_through_graphing(DeepOrraConfig(repo_path="."))
         assert result.run_result.state == IndexState.ERROR
         encoder.encode.assert_not_called()
@@ -264,7 +262,7 @@ class TestGraphingStep2Failures:
         )
         scanner, parser, _ = _setup_default_mocks()
         svc = _make_default_service(scanner=scanner, parser=parser,
-                                     encoder=encoder, graph_builder=graph_builder)
+                                    encoder=encoder, graph_builder=graph_builder)
         result = svc.build_through_graphing(DeepOrraConfig(repo_path="."))
         assert result.run_result.state == IndexState.GRAPHING
         encoder.encode.assert_called_once()
@@ -310,7 +308,7 @@ class TestEncoderInvocation:
             nodes=[], edges=[], node_count=0, edge_count=0,
         )
         svc = _make_default_service(encoder=encoder, graph_builder=graph_builder)
-        result = svc.build_through_graphing(DeepOrraConfig(repo_path="."))
+        svc.build_through_graphing(DeepOrraConfig(repo_path="."))
         encoder.encode.assert_called_once()
         args, _ = encoder.encode.call_args
         assert len(args) >= 1
@@ -321,7 +319,7 @@ class TestEncoderInvocation:
 
     def test_encoder_exception_extracts_partial_result(self):
         partial = _make_batch_result(eligible=1, success=1, fail=0, skipped=0,
-                                      records=[_make_valid_record()])
+                                     records=[_make_valid_record()])
         exc = RuntimeError("partial failure")
         exc.result = partial
         encoder = MagicMock()
@@ -340,7 +338,7 @@ class TestEncoderInvocation:
             ErrorCode.EMBEDDING_MODEL_UNAVAILABLE,
             "model not found",
             result=_make_batch_result(eligible=1, success=1, fail=0, skipped=0,
-                                       records=[_make_valid_record()]),
+                                      records=[_make_valid_record()]),
         )
         encoder = MagicMock()
         encoder.encode.side_effect = exc
@@ -674,7 +672,7 @@ class TestGraphBuilderInvocation:
             nodes=[], edges=[], node_count=0, edge_count=0,
         )
         svc = _make_default_service(encoder=encoder, graph_builder=graph_builder)
-        result = svc.build_through_graphing(DeepOrraConfig(repo_path="."))
+        svc.build_through_graphing(DeepOrraConfig(repo_path="."))
         graph_builder.build.assert_called_once()
 
     def test_graph_builder_exception(self):
@@ -1162,7 +1160,7 @@ class TestSafetyBoundaries:
         scanner = MagicMock()
         scanner.scan.side_effect = RuntimeError("scan fail")
         svc = _make_default_service(scanner=scanner, encoder=MagicMock(),
-                                     graph_builder=MagicMock())
+                                    graph_builder=MagicMock())
         result = svc.build_through_graphing(DeepOrraConfig(repo_path="."))
         assert result.embedding_result is None
 
@@ -1186,7 +1184,7 @@ class TestSafetyBoundaries:
         )
         graph_builder = MagicMock()
         svc = _make_default_service(encoder=encoder, graph_builder=graph_builder)
-        result = svc.build_through_graphing(DeepOrraConfig(repo_path="."))
+        svc.build_through_graphing(DeepOrraConfig(repo_path="."))
         graph_builder.build.assert_called_once()
 
 
@@ -1226,6 +1224,7 @@ class TestDeterminism:
         scanner.scan.side_effect = [MagicMock(), RuntimeError("second fails")]
         scanner.scan.return_value = _make_default_scan_result()
         scan_results = [_make_default_scan_result()]
+
         def scan_side(*args, **kw):
             return scan_results[0] if scan_results else RuntimeError("no more")
         scanner.scan.side_effect = scan_side
@@ -1237,7 +1236,7 @@ class TestDeterminism:
         scanner2 = MagicMock()
         scanner2.scan.side_effect = RuntimeError("fail")
         svc2 = _make_default_service(scanner=scanner2, encoder=MagicMock(),
-                                      graph_builder=MagicMock())
+                                     graph_builder=MagicMock())
         r2 = svc2.build_through_graphing(DeepOrraConfig(repo_path="."))
         assert r2.run_result.state == IndexState.ERROR
 
@@ -1247,7 +1246,6 @@ class TestDeterminism:
 
 class TestBuildFatal:
     def test_fatal_with_chunks(self):
-        svc = _make_default_service(encoder=MagicMock(), graph_builder=MagicMock())
         sm = MagicMock()
         sm.state = IndexState.ERROR
         sm.phase = IndexPhase.EMBED
@@ -1261,7 +1259,6 @@ class TestBuildFatal:
         assert len(result.chunks) == 1
 
     def test_fatal_with_embedding_result(self):
-        svc = _make_default_service(encoder=MagicMock(), graph_builder=MagicMock())
         sm = MagicMock()
         sm.state = IndexState.ERROR
         sm.phase = IndexPhase.EMBED
@@ -1296,13 +1293,13 @@ class TestCorrectedGraphAcceptance:
         graph_builder.build.return_value = GraphBuildResult(
             nodes=[n1, n2, n3], edges=[
                 GraphEdgeInput(source_node_id="file:mod.py", target_node_id="import:mod.py:os:os:1",
-                                relation=GraphRelation.IMPORTS,
-                                source_file="mod.py",
-                                record_id=_euuid("e1")),
+                               relation=GraphRelation.IMPORTS,
+                               source_file="mod.py",
+                               record_id=_euuid("e1")),
                 GraphEdgeInput(source_node_id="file:mod.py", target_node_id="import:mod.py:json:json:2",
-                                relation=GraphRelation.IMPORTS,
-                                source_file="mod.py",
-                                record_id=_euuid("e2")),
+                               relation=GraphRelation.IMPORTS,
+                               source_file="mod.py",
+                               record_id=_euuid("e2")),
             ],
             node_count=3, edge_count=2,
         )
@@ -1404,10 +1401,10 @@ class TestGraphIdentityInvariants:
         # node with empty record ID must be rejected
         gb.build.return_value = self._build_graph_result([
             GraphNodeInput(node_id="n1", node_type=GraphNodeType.FILE,
-                            record_id=""),
+                           record_id=""),
         ])
         svc = _make_default_service(encoder=encoder, graph_builder=gb)
-        r = self._fail_result(svc)
+        self._fail_result(svc)
 
     def test_validator_rejects_duplicate_node_record_id(self):
         encoder = MagicMock()
@@ -1418,12 +1415,12 @@ class TestGraphIdentityInvariants:
         gb = MagicMock()
         gb.build.return_value = self._build_graph_result([
             GraphNodeInput(node_id="n1", node_type=GraphNodeType.FILE,
-                            record_id=_nuuid("dup")),
+                           record_id=_nuuid("dup")),
             GraphNodeInput(node_id="n2", node_type=GraphNodeType.FILE,
-                            record_id=_nuuid("dup")),
+                           record_id=_nuuid("dup")),
         ])
         svc = _make_default_service(encoder=encoder, graph_builder=gb)
-        r = self._fail_result(svc)
+        self._fail_result(svc)
 
     def test_validator_rejects_empty_edge_record_id(self):
         encoder = MagicMock()
@@ -1435,17 +1432,17 @@ class TestGraphIdentityInvariants:
         gb.build.return_value = self._build_graph_result(
             nodes=[
                 GraphNodeInput(node_id="n1", node_type=GraphNodeType.FILE,
-                                record_id=_nuuid("n1")),
+                               record_id=_nuuid("n1")),
                 GraphNodeInput(node_id="n2", node_type=GraphNodeType.FUNCTION,
-                                record_id=_nuuid("n2")),
+                               record_id=_nuuid("n2")),
             ],
             edges=[
                 GraphEdgeInput(source_node_id="n1", target_node_id="n2",
-                                relation=GraphRelation.DEFINES, record_id=""),
+                               relation=GraphRelation.DEFINES, record_id=""),
             ],
         )
         svc = _make_default_service(encoder=encoder, graph_builder=gb)
-        r = self._fail_result(svc)
+        self._fail_result(svc)
 
     def test_validator_rejects_duplicate_canonical_edges(self):
         encoder = MagicMock()
@@ -1455,24 +1452,24 @@ class TestGraphIdentityInvariants:
         )
         gb = MagicMock()
         e1 = GraphEdgeInput(source_node_id="n1", target_node_id="n2",
-                              relation=GraphRelation.DEFINES,
-                              source_file="mod.py", source_location="mod.py:1",
-                              record_id=_euuid("e1"))
+                            relation=GraphRelation.DEFINES,
+                            source_file="mod.py", source_location="mod.py:1",
+                            record_id=_euuid("e1"))
         e2 = GraphEdgeInput(source_node_id="n1", target_node_id="n2",
-                              relation=GraphRelation.DEFINES,
-                              source_file="mod.py", source_location="mod.py:1",
-                              record_id=_euuid("e2"))
+                            relation=GraphRelation.DEFINES,
+                            source_file="mod.py", source_location="mod.py:1",
+                            record_id=_euuid("e2"))
         gb.build.return_value = self._build_graph_result(
             nodes=[
                 GraphNodeInput(node_id="n1", node_type=GraphNodeType.FILE,
-                                record_id=_nuuid("n1")),
+                               record_id=_nuuid("n1")),
                 GraphNodeInput(node_id="n2", node_type=GraphNodeType.FUNCTION,
-                                record_id=_nuuid("n2")),
+                               record_id=_nuuid("n2")),
             ],
             edges=[e1, e2],
         )
         svc = _make_default_service(encoder=encoder, graph_builder=gb)
-        r = self._fail_result(svc)
+        self._fail_result(svc)
 
     def test_validator_rejects_orphan_edge_endpoint(self):
         encoder = MagicMock()
@@ -1484,16 +1481,16 @@ class TestGraphIdentityInvariants:
         gb.build.return_value = self._build_graph_result(
             nodes=[
                 GraphNodeInput(node_id="n1", node_type=GraphNodeType.FILE,
-                                record_id=_nuuid("n1")),
+                               record_id=_nuuid("n1")),
             ],
             edges=[
                 GraphEdgeInput(source_node_id="n1", target_node_id="ghost",
-                                relation=GraphRelation.DEFINES,
-                                record_id=_euuid("e1")),
+                               relation=GraphRelation.DEFINES,
+                               record_id=_euuid("e1")),
             ],
         )
         svc = _make_default_service(encoder=encoder, graph_builder=gb)
-        r = self._fail_result(svc)
+        self._fail_result(svc)
 
     def test_validator_accepts_well_formed_graph(self):
         encoder = MagicMock()
@@ -1505,21 +1502,21 @@ class TestGraphIdentityInvariants:
         gb.build.return_value = self._build_graph_result(
             nodes=[
                 GraphNodeInput(node_id="file:mod.py",
-                                node_type=GraphNodeType.FILE,
-                                source_file="mod.py",
-                                record_id=_nuuid("file:mod.py")),
+                               node_type=GraphNodeType.FILE,
+                               source_file="mod.py",
+                               record_id=_nuuid("file:mod.py")),
                 GraphNodeInput(node_id="function:mod.py:foo:1",
-                                node_type=GraphNodeType.FUNCTION,
-                                source_file="mod.py",
-                                record_id=_nuuid("function:mod.py:foo:1")),
+                               node_type=GraphNodeType.FUNCTION,
+                               source_file="mod.py",
+                               record_id=_nuuid("function:mod.py:foo:1")),
             ],
             edges=[
                 GraphEdgeInput(source_node_id="file:mod.py",
-                                target_node_id="function:mod.py:foo:1",
-                                relation=GraphRelation.DEFINES,
-                                source_file="mod.py",
-                                source_location="mod.py:1",
-                                record_id=_euuid("e1")),
+                               target_node_id="function:mod.py:foo:1",
+                               relation=GraphRelation.DEFINES,
+                               source_file="mod.py",
+                               source_location="mod.py:1",
+                               record_id=_euuid("e1")),
             ],
         )
         svc = _make_default_service(encoder=encoder, graph_builder=gb)

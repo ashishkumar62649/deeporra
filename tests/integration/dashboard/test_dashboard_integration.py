@@ -7,7 +7,6 @@ import sys
 import types
 from pathlib import Path
 
-import pytest
 
 from deeporra.chunking.chunker import Chunker
 from deeporra.contracts import DeepOrraConfig, IndexState
@@ -15,7 +14,7 @@ from deeporra.embeddings.encoder import EXPECTED_DIMENSION, EmbeddingEncoder
 from deeporra.graph.graph_builder import build_graph
 from deeporra.indexing import IndexService
 from deeporra.parser.python_ast import parse
-from deeporra.querying import RepositoryNotIndexedError, QueryService
+from deeporra.querying import QueryService
 from deeporra.scanner.file_scanner import scan
 
 
@@ -193,4 +192,3 @@ class TestDashboardQueryIntegration:
         for s in symbols:
             assert not s.source_path.startswith("/")
             assert not s.source_path.startswith("\\")
-

@@ -148,7 +148,7 @@ INDEX_STATEMENTS = [
 
 def apply(conn):
     """Apply the version 1 schema to the given connection.
-    
+
     Executes inside a transaction. Raises on failure.
     """
     for stmt in DDL_STATEMENTS:

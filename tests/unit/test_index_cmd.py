@@ -2,9 +2,7 @@
 
 import subprocess
 import sys
-from unittest.mock import MagicMock
 
-import pytest
 
 from deeporra.contracts import DeepOrraConfig, IndexRunResult, IndexState, IndexPhase
 from deeporra.cli.commands.index_cmd import (

@@ -110,6 +110,9 @@ if page == "Repository Overview":
     if isinstance(result, str):
         st.error(result)
         st.stop()
+    if result is None:
+        st.error("No repository summary available.")
+        st.stop()
     s = result
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -283,39 +286,39 @@ elif page == "Change Impact":
         if not imp_key.strip():
             st.warning("Please enter a semantic key.")
             st.stop()
-        result = safe_impact(qs, imp_key.strip(), limit=int(imp_limit))
-        if isinstance(result, str):
-            st.error(result)
+        impact = safe_impact(qs, imp_key.strip(), limit=int(imp_limit))
+        if isinstance(impact, str):
+            st.error(impact)
             st.stop()
-        st.markdown(f"### Target: {result['target']}")
-        st.markdown(f"**Kind:** {result['kind']}  \n**File:** {result['source_path']}")
-        st.caption(f"Analysis type: {result['analysis_type']}")
-        if result["warnings"]:
-            st.warning("\n".join(result["warnings"]))
-        if result["direct_callers"]:
+        st.markdown(f"### Target: {impact['target']}")
+        st.markdown(f"**Kind:** {impact['kind']}  \n**File:** {impact['source_path']}")
+        st.caption(f"Analysis type: {impact['analysis_type']}")
+        if impact["warnings"]:
+            st.warning("\n".join(impact["warnings"]))
+        if impact["direct_callers"]:
             st.markdown("#### Direct Callers")
-            for c in result["direct_callers"]:
+            for c in impact["direct_callers"]:
                 src = c.source_path.replace("\\", "/")
                 st.markdown(f"`{c.qualified_name}` — {src}:{c.start_line}")
-        if result["direct_callees"]:
+        if impact["direct_callees"]:
             st.markdown("#### Direct Callees")
-            for c in result["direct_callees"]:
+            for c in impact["direct_callees"]:
                 src = c.source_path.replace("\\", "/")
                 st.markdown(f"`{c.qualified_name}` — {src}:{c.start_line}")
-        if result["containing_file"]:
-            st.markdown(f"#### Containing File\n`{result['containing_file']}`")
-        if result["containing_class"]:
-            st.markdown(f"#### Containing Class\n`{result['containing_class']}`")
-        if result["import_relationships"]:
+        if impact["containing_file"]:
+            st.markdown(f"#### Containing File\n`{impact['containing_file']}`")
+        if impact["containing_class"]:
+            st.markdown(f"#### Containing Class\n`{impact['containing_class']}`")
+        if impact["import_relationships"]:
             st.markdown("#### Import Relationships")
-            for r in result["import_relationships"]:
+            for r in impact["import_relationships"]:
                 st.markdown(f"`{r.qualified_name}` ({r.relationship_type}, {r.direction})")
-        if result["route_relationships"]:
+        if impact["route_relationships"]:
             st.markdown("#### Route Relationships")
-            for r in result["route_relationships"]:
+            for r in impact["route_relationships"]:
                 st.markdown(f"`{r.qualified_name}` ({r.relationship_type})")
-        if result["related_tests"]:
+        if impact["related_tests"]:
             st.markdown("#### Directly Represented Tests")
-            for t in result["related_tests"]:
+            for t in impact["related_tests"]:
                 src = t.source_path.replace("\\", "/")
                 st.markdown(f"`{t.qualified_name}` — {src}:{t.start_line}")

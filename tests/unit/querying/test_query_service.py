@@ -1,6 +1,5 @@
 """Focused unit tests for the read-only query service."""
 
-import json
 import sys
 import types
 from pathlib import Path
@@ -12,7 +11,6 @@ from deeporra.contracts import DeepOrraConfig, IndexState
 from deeporra.embeddings.encoder import EXPECTED_DIMENSION, EmbeddingEncoder
 from deeporra.graph.graph_builder import build_graph
 from deeporra.indexing import IndexService
-from deeporra.indexing.full_rebuild import FullRebuildCoordinator
 from deeporra.parser.python_ast import parse
 from deeporra.querying import QueryService, RepositoryNotIndexedError, QueryValidationError
 from deeporra.scanner.file_scanner import scan

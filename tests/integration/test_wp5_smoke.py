@@ -9,8 +9,6 @@
 - Determinism verified by running the pipeline twice on identical inputs.
 """
 
-import hashlib
-import math
 import os
 import shutil
 import sys
@@ -18,18 +16,11 @@ import tempfile
 import types
 from collections import Counter
 from pathlib import Path
-from typing import Sequence
 
 import pytest
 
 from deeporra.contracts import (
-    ChunkType,
-    EmbeddingBatchResult,
-    EmbeddingEncoderProtocol,
-    EmbeddingInput,
     DeepOrraConfig,
-    GraphBuildResult,
-    IndexPhase,
     IndexState,
     ParseStatus,
 )
@@ -245,8 +236,8 @@ def test_wp5_step3_smoke(temp_repo, fake_sentence_transformers):
     # ── Pre-graph parser evidence (must succeed before graph builder sees Pf)
     scan = scan_repo(
         type("R", (), {"repo_path": temp_repo, "max_files": 10000,
-                        "max_size_bytes": 52_428_800, "skip_hidden": True,
-                        "skip_binary": True})(),
+                       "max_size_bytes": 52_428_800, "skip_hidden": True,
+                       "skip_binary": True})(),
         config,
     )
     parsed_files = []
@@ -261,11 +252,11 @@ def test_wp5_step3_smoke(temp_repo, fake_sentence_transformers):
 
     # ── Run 1 ──────────────────────────────────────────────────────────────
     result1 = _run_through(svc, config, encoder, fake_sentence_transformers,
-                            reset_counters=True)
+                           reset_counters=True)
 
     # ── Run 2 (determinism) ────────────────────────────────────────────────
     result2 = _run_through(svc, config, encoder, fake_sentence_transformers,
-                            reset_counters=False)
+                           reset_counters=False)
 
     # ── Evidence push (determinism + invariants) ───────────────────────────
     g1 = result1.graph_result
@@ -278,11 +269,11 @@ def test_wp5_step3_smoke(temp_repo, fake_sentence_transformers):
     erids1 = sorted([e.record_id for e in g1.edges])
     erids2 = sorted([e.record_id for e in g2.edges])
     canon1 = sorted([(e.source_node_id, e.target_node_id, e.relation.value,
-                       e.source_file or "", e.source_location or "")
-                      for e in g1.edges])
+                      e.source_file or "", e.source_location or "")
+                     for e in g1.edges])
     canon2 = sorted([(e.source_node_id, e.target_node_id, e.relation.value,
-                       e.source_file or "", e.source_location or "")
-                      for e in g2.edges])
+                      e.source_file or "", e.source_location or "")
+                     for e in g2.edges])
 
     print("FIRST_NODE_IDS=", _label_keys(nids1))
     print("SECOND_NODE_IDS=", _label_keys(nids2))
@@ -350,7 +341,7 @@ def test_wp5_step3_smoke(temp_repo, fake_sentence_transformers):
     all_texts = [t for texts in fake_sentence_transformers.encode_calls for t in texts]
     print("MODEL_RECEIVED_TEXTS=", _label_keys(all_texts[:20]))
     print("SECRET_FORWARDED=", any("ghp_token123456789012345678901234567890" in t
-                                    for t in all_texts))
+                                   for t in all_texts))
     print("PARSE_ERROR_FORWARDED=", any("def broken(:" in t for t in all_texts))
 
     # The fake model always returns 384-dim vectors

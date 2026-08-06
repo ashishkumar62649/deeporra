@@ -3,8 +3,6 @@
 import subprocess
 import sys
 
-import typer
-
 
 class TestEntryPoints:
     def test_python_m_deeporra_help(self):
@@ -26,7 +24,6 @@ class TestEntryPoints:
 
     def test_help_does_not_import_unvisited_modules(self):
         before = set(sys.modules.keys())
-        import deeporra.cli.main
         after = set(sys.modules.keys())
         new_modules = after - before
         forbidden = {"deeporra.storage", "deeporra.scanner", "deeporra.parser",
@@ -34,6 +31,7 @@ class TestEntryPoints:
                      "deeporra.graph", "deeporra.retrieval"}
         assert new_modules.isdisjoint(forbidden), \
             f"CLI startup imported: {new_modules & forbidden}"
+
 
 class TestIndexCommand:
     def test_index_accepts_positional_path(self):
@@ -68,7 +66,6 @@ class TestDashboardCommand:
 
     def test_dashboard_not_deferred(self):
         from deeporra.cli.commands.dashboard_cmd import dashboard_cmd
-        import typer
         assert not hasattr(dashboard_cmd, "__wrapped__") or "Exit" not in str(dashboard_cmd)
 
 

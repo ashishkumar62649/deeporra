@@ -39,9 +39,9 @@ def check_required_imports() -> DoctorCheck:
     return DoctorCheck(
         name="required_imports",
         passed=True,
-            message=f"all available ({', '.join(_REQUIRED_IMPORTS)})",
-            severity=DiagnosticSeverity.WARNING,
-        )
+        message=f"all available ({', '.join(_REQUIRED_IMPORTS)})",
+        severity=DiagnosticSeverity.WARNING,
+    )
 
 
 def check_sqlite_fts5() -> DoctorCheck:

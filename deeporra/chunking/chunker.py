@@ -330,7 +330,7 @@ class Chunker:
         lines = sf.safe_content.split("\n")
         if sym.start_line < 1 or sym.end_line > len(lines):
             return ""
-        class_lines = lines[sym.start_line - 1 : sym.end_line]
+        class_lines = lines[sym.start_line - 1: sym.end_line]
         if not class_lines:
             return ""
         header = class_lines[0]
@@ -397,7 +397,7 @@ class Chunker:
     def _chunk_markdown(self, sf: ScannedFile) -> list[CodeChunk]:
         if not sf.safe_content.strip():
             return []
-        return self._split_doc_chunks(sf, r"^(#{1,6})\s")
+        return self._split_doc_chunks(sf, re.compile(r"^(#{1,6})\s"))
 
     def _chunk_rst(self, sf: ScannedFile) -> list[CodeChunk]:
         if not sf.safe_content.strip():
@@ -408,26 +408,23 @@ class Chunker:
         r"^([=\-~^`:'\"\._*+#<>!@$%&]){3,}\s*$", re.MULTILINE
     )
 
-    def _split_doc_chunks(self, sf: ScannedFile, md_pattern: str) -> list[CodeChunk]:
+    def _split_doc_chunks(self, sf: ScannedFile, md_pattern: re.Pattern) -> list[CodeChunk]:
         content = sf.safe_content
         lines = content.split("\n")
         is_rst = sf.file_path.lower().endswith(".rst")
 
-        if is_rst:
-            heading_spans: list[tuple[int, int, str, str]] = []
-            for i, line in enumerate(lines):
+        heading_spans: list[tuple[int, int, str, str]] = []
+        for i, line in enumerate(lines):
+            if is_rst:
                 if i + 1 < len(lines) and re.match(r"^([=\-~^`:'\"\._*+#<>!@$%&]){3,}\s*$", lines[i + 1]):
                     marker = lines[i + 1][0]
                     heading_spans.append((i + 1, i + 2, line.strip(), marker))
-            return self._build_doc_chunks(sf, content, heading_spans)
-
-        heading_spans: list[tuple[int, int, str, str]] = []
-        for i, line in enumerate(lines):
-            m = re.match(md_pattern, line)
-            if m:
-                level = len(m.group(1))
-                heading_text = line.lstrip("#").strip()
-                heading_spans.append((i + 1, i + 1, heading_text, str(level)))
+            else:
+                m = re.match(md_pattern, line)
+                if m:
+                    level = len(m.group(1))
+                    heading_text = line.lstrip("#").strip()
+                    heading_spans.append((i + 1, i + 1, heading_text, str(level)))
 
         return self._build_doc_chunks(sf, content, heading_spans)
 
@@ -444,7 +441,7 @@ class Chunker:
 
         for idx, (hdr_line, _, heading_text, heading_level) in enumerate(heading_spans):
             if prev_end < hdr_line - 1:
-                preamble = "\n".join(lines[prev_end : hdr_line - 1])
+                preamble = "\n".join(lines[prev_end: hdr_line - 1])
                 preamble = preamble.strip()
                 if preamble:
                     c_hash = self._make_content_hash(preamble)
@@ -568,7 +565,7 @@ class Chunker:
         block_size = 100
 
         for i in range(0, total, block_size):
-            block_lines = lines[i : i + block_size]
+            block_lines = lines[i: i + block_size]
             block_content = "\n".join(block_lines)
             if not block_content.strip():
                 continue

@@ -7,7 +7,7 @@ import uuid as uuid_mod
 
 import pytest
 
-from deeporra.storage.graph_store import GraphStore, _json_dumps
+from deeporra.storage.graph_store import GraphStore
 from deeporra.storage.sqlite_store import SQLiteStore
 
 
@@ -190,8 +190,8 @@ class TestGraphStoreProtocol:
         from deeporra.contracts.interfaces import GraphStoreProtocol
         sig_store = inspect.signature(GraphStoreProtocol.store_graph)
         sig_reset = inspect.signature(GraphStoreProtocol.reset)
-        self_sig_store = inspect.signature(GraphStore.store_graph)
-        self_sig_reset = inspect.signature(GraphStore.reset)
+        inspect.signature(GraphStore.store_graph)
+        inspect.signature(GraphStore.reset)
         assert list(sig_store.parameters.keys()) == ["self", "nodes", "edges"]
         assert list(sig_reset.parameters.keys()) == ["self"]
         assert callable(getattr(GraphStore, "store_graph"))

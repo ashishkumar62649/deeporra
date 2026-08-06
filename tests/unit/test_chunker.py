@@ -1,7 +1,6 @@
 """Tests for Chunker — safe-content handoff and semantic chunk creation."""
 
 import hashlib
-import re
 import uuid
 
 import pytest
@@ -15,7 +14,6 @@ from deeporra.contracts.enums import (
     SymbolType,
 )
 from deeporra.contracts.models import (
-    CodeChunk,
     ParsedFile,
     ParsedImport,
     ParsedRoute,
@@ -34,17 +32,6 @@ def _py_scanned(
     line_count: int = 0,
     file_type: FileType = FileType.SOURCE,
 ) -> ScannedFile:
-    lines = content.split("\n")
-    if content and not content.endswith("\n"):
-        lc = len(lines)
-    else:
-        lc = len(lines) - 1 if content.endswith("\n") and lines == [""] else len(lines)
-        if content and not content.endswith("\n"):
-            pass
-        elif content == "":
-            lc = 0
-        else:
-            lc = len(lines) - 1 if content.endswith("\n") else len(lines)
     actual_lc = line_count or max(content.count("\n"), 1)
     if content == "":
         actual_lc = 0
@@ -233,7 +220,7 @@ class TestCodeChunkCanonical:
         assert hasattr(c, "metadata")
 
     def test_no_stale_fields(self):
-        from deeporra.contracts import CodeChunk, ChunkType
+        from deeporra.contracts import CodeChunk
         assert not hasattr(CodeChunk, "text")
         assert not hasattr(CodeChunk, "source_file")
         assert not hasattr(CodeChunk, "embedding")
@@ -290,7 +277,7 @@ class TestFileAccessAndPrivacy:
     def test_uses_safe_content(self):
         c = Chunker()
         sf = _py_scanned("safe.py", "API_KEY = '[REDACTED]'\n", file_id="file:safe.py",
-                          has_secrets=True, line_count=1)
+                         has_secrets=True, line_count=1)
         pf = _parsed(file_id="file:safe.py", path="safe.py", status=ParseStatus.ERROR)
         chunks = c.chunk([sf], [pf])
         for chunk in chunks:
@@ -300,7 +287,7 @@ class TestFileAccessAndPrivacy:
     def test_redaction_marker_retained(self):
         c = Chunker()
         sf = _py_scanned("safe.py", "API_KEY = '[REDACTED]'\n", file_id="file:safe.py",
-                          has_secrets=True, line_count=1)
+                         has_secrets=True, line_count=1)
         pf = _parsed(file_id="file:safe.py", path="safe.py", status=ParseStatus.ERROR)
         chunks = c.chunk([sf], [pf])
         for chunk in chunks:
@@ -310,7 +297,7 @@ class TestFileAccessAndPrivacy:
     def test_chunk_serialization_no_raw_secret(self):
         c = Chunker()
         sf = _py_scanned("safe.py", "TOKEN='[REDACTED]'\n", file_id="file:safe.py",
-                          has_secrets=True, line_count=1)
+                         has_secrets=True, line_count=1)
         pf = _parsed(file_id="file:safe.py", path="safe.py", status=ParseStatus.ERROR)
         chunks = c.chunk([sf], [pf])
         for chunk in chunks:
@@ -326,7 +313,7 @@ class TestPythonChunking:
         c = Chunker()
         sf = _py_scanned("app.py", "'''mod doc'''\nimport os\nx=1\n", file_id="file:app.py")
         pf = _parsed(file_id="file:app.py", path="app.py", status=ParseStatus.PARSED,
-                      imports=[_imp("os")])
+                     imports=[_imp("os")])
         chunks = c.chunk([sf], [pf])
         summaries = [ch for ch in chunks if ch.chunk_type == ChunkType.FILE_SUMMARY]
         assert len(summaries) == 1
@@ -825,7 +812,8 @@ class TestFilePathRequired:
 class TestFileAccessTraps:
     def test_path_read_text_not_called(self, monkeypatch):
         import pathlib
-        original = pathlib.Path.read_text
+        pathlib.Path.read_text
+
         def trap(*a, **kw):
             raise RuntimeError("Path.read_text called")
         monkeypatch.setattr(pathlib.Path, "read_text", trap)
@@ -836,7 +824,8 @@ class TestFileAccessTraps:
 
     def test_path_read_bytes_not_called(self, monkeypatch):
         import pathlib
-        original = pathlib.Path.read_bytes
+        pathlib.Path.read_bytes
+
         def trap(*a, **kw):
             raise RuntimeError("Path.read_bytes called")
         monkeypatch.setattr(pathlib.Path, "read_bytes", trap)
@@ -1064,7 +1053,7 @@ class TestMetadataJsonSerialization:
         for ch in chunks:
             s = json.dumps(ch.metadata, sort_keys=True)
             assert isinstance(s, str)
-            d = json.loads(s)
+            json.loads(s)
 
     def test_doc_chunk_metadata_json_serializable(self):
         import json

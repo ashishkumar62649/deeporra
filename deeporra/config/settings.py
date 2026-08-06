@@ -19,7 +19,7 @@ def _config_path(repo_path: str) -> Path:
     return Path(repo_path) / CONFIG_FILE_NAME
 
 
-def _nested_get(data: dict, keys: tuple) -> object:
+def _nested_get(data: object, keys: tuple) -> object:
     val = data
     for k in keys:
         if not isinstance(val, dict):

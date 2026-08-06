@@ -6,9 +6,7 @@ SQLite/FTS stores for focused readback/evidence tests.
 
 import hashlib
 import os
-import sqlite3
 import tempfile
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -19,28 +17,22 @@ from deeporra.contracts import (
     Confidence,
     DiagnosticSeverity,
     EmbeddingBatchResult,
-    EmbeddingInput,
     EmbeddingMetadata,
     EmbeddingRecord,
     ErrorCode,
     DeepOrraConfig,
     GraphBuildResult,
-    GraphEdgeInput,
     GraphNodeInput,
     GraphNodeType,
-    GraphRelation,
     IndexPhase,
     IndexState,
     ParseStatus,
     ParsedFile,
-    ParsedImport,
-    ParsedRoute,
     ParsedSymbol,
     ScanResult,
     ScannedFile,
     FileType,
     SymbolType,
-    HttpMethod,
 )
 from deeporra.embeddings import EXPECTED_DIMENSION
 from deeporra.indexing.index_service import IndexService
@@ -99,26 +91,27 @@ def _make_batch_result(eligible=1, success=1, fail=0, skipped=0,
 
 def _make_default_scan_result(files=None):
     sf = files or [_make_scanned(pid="file:app.py", path="app.py",
-                                  parse_status=ParseStatus.PARSED,
-                                  is_binary=False)]
+                                 parse_status=ParseStatus.PARSED,
+                                 is_binary=False)]
     return ScanResult(
         files=sf,
         eligible_file_count=len(sf), total_count=len(sf),
         eligible_total_bytes=100,
     )
 
+
 def _make_pending_scan_result():
     return ScanResult(
         files=[_make_scanned(pid="file:app.py", path="app.py",
-                              parse_status=ParseStatus.PENDING, has_secrets=False,
-                              is_binary=False)],
+                             parse_status=ParseStatus.PENDING, has_secrets=False,
+                             is_binary=False)],
         eligible_file_count=1, total_count=1, eligible_total_bytes=100,
     )
 
 
 def _make_default_parsed_files():
     return [ParsedFile(file_id="file:app.py", file_path="app.py",
-                        status=ParseStatus.PARSED)]
+                       status=ParseStatus.PARSED)]
 
 
 def _nuuid(name: str) -> str:
@@ -177,7 +170,7 @@ class _FakeSQLite:
         return 1
 
     def cleanup_failed_replacement(self, repo_id, error_message,
-                                    warning_count=0, error_count=0):
+                                   warning_count=0, error_count=0):
         self.calls.append(f"cleanup_failed_replacement({repo_id})")
         self._last_error = error_message
 
@@ -253,7 +246,7 @@ class _FatalSQLite:
             raise RuntimeError("simulated chunk failure")
 
     def cleanup_failed_replacement(self, repo_id, error_message,
-                                    warning_count=0, error_count=0):
+                                   warning_count=0, error_count=0):
         self._last_error = error_message
 
     def begin_transaction(self):
@@ -324,28 +317,28 @@ def real_sqlite_fts():
 class TestConstructorAPI:
     def test_prior_constructor_forms_valid(self):
         s = IndexService(scanner=MagicMock(), parser=MagicMock(),
-                          chunker=MagicMock())
+                         chunker=MagicMock())
         assert s._sqlite_store is None
         assert s._fts_store is None
 
     def test_sqlite_dep_accepted(self):
         sql = _FakeSQLite()
         s = IndexService(scanner=MagicMock(), parser=MagicMock(),
-                          chunker=MagicMock(), sqlite_store=sql)
+                         chunker=MagicMock(), sqlite_store=sql)
         assert s._sqlite_store is sql
 
     def test_fts_dep_accepted(self):
         fts = _FakeFTS()
         s = IndexService(scanner=MagicMock(), parser=MagicMock(),
-                          chunker=MagicMock(), fts_store=fts)
+                         chunker=MagicMock(), fts_store=fts)
         assert s._fts_store is fts
 
     def test_constructor_calls_neither_store(self):
         sql = _FakeSQLite()
         fts = _FakeFTS()
-        s = IndexService(scanner=MagicMock(), parser=MagicMock(),
-                          chunker=MagicMock(), sqlite_store=sql,
-                          fts_store=fts)
+        IndexService(scanner=MagicMock(), parser=MagicMock(),
+                     chunker=MagicMock(), sqlite_store=sql,
+                     fts_store=fts)
         assert sql.calls == []
         assert fts.calls == []
 
@@ -355,25 +348,26 @@ class TestConstructorAPI:
 
     def test_run_index_exists_for_complete_builds(self):
         s = IndexService(scanner=MagicMock(), parser=MagicMock(),
-                          chunker=MagicMock())
+                         chunker=MagicMock())
         assert hasattr(s, "run_index")
 
     def test_get_status_exists_for_step6(self):
         s = IndexService(scanner=MagicMock(), parser=MagicMock(),
-                          chunker=MagicMock())
+                         chunker=MagicMock())
         assert hasattr(s, "get_status")
 
     def test_get_counts_exists_for_step6(self):
         s = IndexService(scanner=MagicMock(), parser=MagicMock(),
-                          chunker=MagicMock())
+                         chunker=MagicMock())
         assert hasattr(s, "get_counts")
 
 
 _UNSET = object()
 
+
 def _make_step4_svc(scanner=_UNSET, parser=_UNSET, chunker=_UNSET,
-                     encoder=_UNSET, graph_builder=_UNSET,
-                     sqlite_store=_UNSET, fts_store=_UNSET):
+                    encoder=_UNSET, graph_builder=_UNSET,
+                    sqlite_store=_UNSET, fts_store=_UNSET):
     if scanner is _UNSET:
         sc = MagicMock()
         sc.scan.return_value = _make_default_scan_result()
@@ -632,7 +626,7 @@ class TestRealStoreReadback:
     """Uses real SQLite + real FTS (if available) to prove evidence survives."""
 
     def _build_and_probe(self, temp_dir, files, parsed_files, chunks,
-                          skip_fresh=False):
+                         skip_fresh=False):
         db_path = os.path.join(temp_dir, "index.db")
         sqlite = SQLiteStore(db_path)
         sqlite.connect()
@@ -659,9 +653,9 @@ class TestRealStoreReadback:
         gb = MagicMock()
         gb.build.return_value = GraphBuildResult(
             nodes=[GraphNodeInput(node_id="file:main.py",
-                                   node_type=GraphNodeType.FILE,
-                                   source_file="main.py",
-                                   record_id=_nuuid("file:main.py"))],
+                                  node_type=GraphNodeType.FILE,
+                                  source_file="main.py",
+                                  record_id=_nuuid("file:main.py"))],
             edges=[], node_count=1, edge_count=0,
         )
         svc = IndexService(
@@ -670,8 +664,8 @@ class TestRealStoreReadback:
             sqlite_store=sqlite, fts_store=fts,
         )
         r = svc.build_through_sqlite_fts(DeepOrraConfig(repo_path=temp_dir,
-                                                       max_files=10000,
-                                                       max_size_bytes=52428800))
+                                                        max_files=10000,
+                                                        max_size_bytes=52428800))
         return r, sqlite, fts
 
     def _chunk(self, cid="c1", fid="file:main.py", path="main.py",
@@ -689,12 +683,12 @@ class TestRealStoreReadback:
         try:
             sf = _make_scanned(pid="file:main.py", path="main.py")
             pf = ParsedFile(file_id="file:main.py", file_path="main.py",
-                             status=ParseStatus.PARSED,
-                             symbols=[
-                                 ParsedSymbol(name="foo", symbol_type=SymbolType.FUNCTION,
-                                              symbol_id="sym:foo", start_line=1, end_line=2,
-                                              confidence=Confidence.EXTRACTED),
-                             ])
+                            status=ParseStatus.PARSED,
+                            symbols=[
+                                ParsedSymbol(name="foo", symbol_type=SymbolType.FUNCTION,
+                                             symbol_id="sym:foo", start_line=1, end_line=2,
+                                             confidence=Confidence.EXTRACTED),
+                            ])
             chunks = [self._chunk("ch1", content="def foo(): return 42")]
             r, sqlite, fts = self._build_and_probe(d, [sf], [pf], chunks)
             assert r.run_result.state == IndexState.STORING
@@ -717,7 +711,7 @@ class TestRealStoreReadback:
         try:
             sf = _make_scanned(pid="file:main.py", path="main.py")
             pf = ParsedFile(file_id="file:main.py", file_path="main.py",
-                             status=ParseStatus.PARSED)
+                            status=ParseStatus.PARSED)
             c = self._chunk("ch1", content="def handle_user(): return 'ok'", sym="handle_user")
             chunks = [c]
             r, sqlite, fts = self._build_and_probe(d, [sf], [pf], chunks)
@@ -734,9 +728,9 @@ class TestRealStoreReadback:
         try:
             sf = _make_scanned(pid="file:app.py", path="app.py")
             pf = ParsedFile(file_id="file:app.py", file_path="app.py",
-                             status=ParseStatus.PARSED)
+                            status=ParseStatus.PARSED)
             c = self._chunk("ch1", fid="file:app.py", path="app.py",
-                             content="ghp_token1234567890")
+                            content="ghp_token1234567890")
             chunks = [c]
             r, sqlite, fts = self._build_and_probe(d, [sf], [pf], chunks)
             repo_id = sqlite.find_repository(os.path.abspath(d))
@@ -757,7 +751,7 @@ class TestRealStoreReadback:
         try:
             sf = _make_scanned(pid="file:main.py", path="main.py")
             pf = ParsedFile(file_id="file:main.py", file_path="main.py",
-                             status=ParseStatus.PARSED)
+                            status=ParseStatus.PARSED)
             c = self._chunk("ch1", content="def foo(): pass")
             chunks = [c]
             r, sqlite, fts = self._build_and_probe(d, [sf], [pf], chunks)
@@ -857,6 +851,7 @@ class TestPersistenceFailures:
             _make_step4_svc(
                 sqlite_store=sql, fts_store=fts
             ).build_through_sqlite_fts(DeepOrraConfig(repo_path="."))
+
     def test_failure_after_storing_transition(self):
         sql = _FatalSQLite(fail_on="insert_symbols")
         fts = _FakeFTS()
@@ -927,6 +922,7 @@ class TestPersistenceFailures:
             db_path = os.path.join(tmp, "test.db")
             sqlite = SQLiteStore(db_path)
             sqlite.connect()
+
             class FailingRealFTS(FTSStore):
                 def rebuild_all(self, conn):
                     super().rebuild_all(conn)
@@ -956,8 +952,8 @@ class TestPersistenceFailures:
                 sqlite_store=sqlite, fts_store=fts,
             )
             r = svc.build_through_sqlite_fts(DeepOrraConfig(repo_path=tmp,
-                                                           max_files=10000,
-                                                           max_size_bytes=52428800))
+                                                            max_files=10000,
+                                                            max_size_bytes=52428800))
             assert r.run_result.state == IndexState.ERROR
             assert sqlite.conn.execute("SELECT COUNT(*) FROM repositories").fetchone()[0] == 0
             assert sqlite.conn.execute("SELECT COUNT(*) FROM files").fetchone()[0] == 0
@@ -1025,7 +1021,7 @@ class TestNoLaterStage:
         sql = _FakeSQLite()
         fts = _FakeFTS()
         s = _make_step4_svc(sqlite_store=sql, fts_store=fts)
-        r = s.build_through_sqlite_fts(DeepOrraConfig(repo_path="."))
+        s.build_through_sqlite_fts(DeepOrraConfig(repo_path="."))
         for c in sql.calls:
             assert "chroma" not in c.lower()
             assert "vector" not in c.lower()
@@ -1034,7 +1030,7 @@ class TestNoLaterStage:
         sql = _FakeSQLite()
         fts = _FakeFTS()
         s = _make_step4_svc(sqlite_store=sql, fts_store=fts)
-        r = s.build_through_sqlite_fts(DeepOrraConfig(repo_path="."))
+        s.build_through_sqlite_fts(DeepOrraConfig(repo_path="."))
         for c in sql.calls:
             assert "code_node" not in c.lower()
             assert "graph_node" not in c.lower()

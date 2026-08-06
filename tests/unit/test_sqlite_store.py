@@ -366,7 +366,6 @@ class TestDuplicateAndUniqueness:
 
 class TestSuppliedUUIDs:
     def test_supplied_uuids_preserved(self, store, repo_id):
-        my_uuid = "my-custom-uuid-12345"
         store.conn.execute(
             "INSERT INTO repositories (id, path) VALUES (?, ?)",
             ("other-id", "/tmp/other"),

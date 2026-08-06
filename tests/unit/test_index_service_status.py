@@ -62,6 +62,7 @@ def test_status_methods_require_an_injected_reader_before_io():
 def test_status_methods_delegate_to_one_reader_snapshot():
     class Reader:
         def __init__(self): self.calls = 0
+
         def read(self):
             self.calls += 1
             from deeporra.contracts import IndexStatusRecord

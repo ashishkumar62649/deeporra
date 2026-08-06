@@ -13,7 +13,7 @@ Validation and warning-conversion helpers live in `deeporra.indexing.validation`
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TypedDict
 
 from deeporra.contracts import (
     ChunkerProtocol,
@@ -24,7 +24,6 @@ from deeporra.contracts import (
     EmbeddingInput,
     ErrorCode,
     DeepOrraConfig,
-    FTSStoreProtocol,
     GraphBuildResult,
     GraphBuilderProtocol,
     IndexBuildResult,
@@ -40,7 +39,6 @@ from deeporra.contracts import (
     RepoInput,
     ScanResult,
     ScannerProtocol,
-    SQLiteStoreProtocol,
 )
 from deeporra.embeddings import build_embedding_inputs
 from deeporra.indexing.full_rebuild import FullRebuildCoordinator
@@ -48,6 +46,8 @@ from deeporra.indexing.sqlite_fts_persistence import (
     AlreadyIndexedRepositoryError,
     run_step4_persistence,
 )
+from deeporra.storage.sqlite_store import SQLiteStore
+from deeporra.storage.fts_store import FTSStore
 from deeporra.indexing.validation import (
     convert_embedding_warnings,
     convert_scanner_warnings,
@@ -63,6 +63,15 @@ from deeporra.indexing.validation import (
 from deeporra.indexing.state_machine import IndexStateMachine
 
 
+class _Step2Data(TypedDict):
+    scan_result: ScanResult
+    parsed_files: list[ParsedFile]
+    chunks: list[CodeChunk]
+    parse_ok_count: int
+    parse_err_count: int
+    symbol_count: int
+
+
 @dataclass
 class _AttemptScaffolding:
     """Per-attempt scaffolding returned by IndexService._fresh_attempt().
@@ -73,7 +82,7 @@ class _AttemptScaffolding:
     - a fatal IndexBuildResult short-circuiting the attempt
       (`fatal is not None`).
     """
-    sm: Optional[IndexStateMachine]
+    sm: IndexStateMachine
     diagnostics: list[IndexDiagnostic]
     compat_errors: list[str]
     fatal: Optional[IndexBuildResult] = None
@@ -87,6 +96,8 @@ class IndexService:
     Step 4: +SQLite metadata + FTS staging (build_through_sqlite_fts)
     """
 
+    _step2_data: _Step2Data
+
     def __init__(
         self,
         scanner: ScannerProtocol,
@@ -95,8 +106,8 @@ class IndexService:
         *,
         encoder: Optional[EmbeddingEncoderProtocol] = None,
         graph_builder: Optional[GraphBuilderProtocol] = None,
-        sqlite_store: Optional[SQLiteStoreProtocol] = None,
-        fts_store: Optional[FTSStoreProtocol] = None,
+        sqlite_store: Optional["SQLiteStore"] = None,
+        fts_store: Optional["FTSStore"] = None,
         status_reader=None,
     ) -> None:
         if scanner is None:
@@ -240,7 +251,7 @@ class IndexService:
                 sm, diagnostics, compat_errors, None
             )
             return _AttemptScaffolding(
-                sm=None, diagnostics=diagnostics,
+                sm=sm, diagnostics=diagnostics,
                 compat_errors=compat_errors, fatal=fatal,
             )
 
@@ -517,11 +528,13 @@ class IndexService:
             )
 
         embedding_result: EmbeddingBatchResult
+        assert self._encoder is not None  # guarded in public entrypoints
         try:
             embedding_result = self._encoder.encode(embedding_inputs)
         except Exception as exc:
-            embedding_result = extract_partial_result(exc)
-            if embedding_result is not None:
+            partial = extract_partial_result(exc)
+            if partial is not None:
+                embedding_result = partial
                 embed_validation = validate_embedding_result(
                     embedding_result, embedding_inputs
                 )
@@ -616,6 +629,7 @@ class IndexService:
         sm.transition(IndexState.GRAPHING)
 
         graph_result: GraphBuildResult
+        assert self._graph_builder is not None  # guarded in public entrypoints
         try:
             graph_result = self._graph_builder.build(parsed_files)
         except Exception:
@@ -699,8 +713,8 @@ class IndexService:
         parse_ok_count: int = d2["parse_ok_count"]
         parse_err_count: int = d2["parse_err_count"]
         symbol_count: int = d2["symbol_count"]
-        embedding_result: EmbeddingBatchResult = getattr(self, "_step3_embedding_result", None)
-        graph_result: GraphBuildResult = getattr(self, "_step3_graph_result", None)
+        embedding_result = getattr(self, "_step3_embedding_result", None)
+        graph_result = getattr(self, "_step3_graph_result", None)
 
         if embedding_result is None or graph_result is None:
             diag = IndexDiagnostic(
@@ -721,7 +735,7 @@ class IndexService:
         # ── STORING transition (state machine flips persistence-started) ─────
         try:
             sm.transition(IndexState.STORING)
-        except Exception as exc:
+        except Exception:
             diag = IndexDiagnostic(
                 code=ErrorCode.PERSIST_FAILED.value,
                 message="Index metadata persistence failed.",
@@ -740,6 +754,7 @@ class IndexService:
 
         sqlite_store = self._sqlite_store
         fts_store = self._fts_store
+        assert sqlite_store is not None and fts_store is not None  # guarded in public entrypoints
 
         # Stage metadata + FTS in one transactional attempt on the shared
         # `sqlite_store.conn`.
@@ -1007,6 +1022,7 @@ class IndexService:
         parsed_files: Optional[list[ParsedFile]] = None,
         chunks: Optional[list[CodeChunk]] = None,
         embedding_result: Optional[EmbeddingBatchResult] = None,
+        graph_result: Optional[GraphBuildResult] = None,
     ) -> IndexBuildResult:
         if sm.state != IndexState.ERROR:
             sm.fail()
@@ -1036,5 +1052,5 @@ class IndexService:
             parsed_files=parsed_files or [],
             chunks=chunks or [],
             embedding_result=embedding_result,
-            graph_result=None,
+            graph_result=graph_result,
         )

@@ -1,7 +1,6 @@
 """Unit tests for FTSStore."""
 
 import os
-import sqlite3
 import tempfile
 import uuid as uuid_mod
 
@@ -441,7 +440,7 @@ class TestLIKE:
 class TestFTSUnavailable:
     def test_fallback_mode_returned_when_no_fts(self, db, fts_available):
         store, repo_id = db
-        fts = FTSStore()
+        FTSStore()
         if not fts_available:
             assert not fts_available
         else:

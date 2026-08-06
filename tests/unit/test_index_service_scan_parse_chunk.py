@@ -1,6 +1,5 @@
 """Tests for IndexService.build_through_chunking — config validation, scan, parse, chunk."""
 
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock

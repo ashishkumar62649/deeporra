@@ -829,14 +829,14 @@ class QueryService:
 
     @staticmethod
     def _edge_filter(edge_types: Optional[list[str]]) -> str:
-        valid = list(GraphRelation.__members__.values())
+        valid = [e.value for e in GraphRelation]
         if edge_types:
             filtered = [et for et in edge_types if et in valid]
             if not filtered:
                 filtered = valid
         else:
             filtered = valid
-        placeholders = ", ".join(f"'{v}'" for v in (e.value if hasattr(e, 'value') else e for e in filtered))
+        placeholders = ", ".join(f"'{v}'" for v in filtered)
         return placeholders
 
     @staticmethod

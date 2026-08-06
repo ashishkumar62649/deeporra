@@ -36,7 +36,8 @@ def status_cmd(
         typer.echo("No active index.")
         return
     counts = status.counts
-    typer.echo(f"state={status.state.value} phase={status.phase.value}")
+    phase = status.phase.value if status.phase else "none"
+    typer.echo(f"state={status.state.value} phase={phase}")
     typer.echo(
         f"scanned={counts.scanned} parsed={counts.parsed} parse_errors={counts.parse_errors} "
         f"symbols={counts.symbols} chunks={counts.chunks} embedding_eligible={counts.embedding_eligible} "

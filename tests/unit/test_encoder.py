@@ -1,10 +1,7 @@
 """Unit tests for EmbeddingEncoder — local offline embeddings."""
 
-import importlib
 import json
-import math
 import sys
-from typing import Any
 
 import pytest
 
@@ -15,11 +12,9 @@ from deeporra.contracts.models import (
     EmbeddingBatchResult,
     EmbeddingInput,
     EmbeddingMetadata,
-    EmbeddingRecord,
 )
 from deeporra.embeddings import EmbeddingEncoder, EmbeddingEncoderError, build_embedding_inputs
 from deeporra.embeddings.encoder import (
-    BATCH_SIZE,
     EXPECTED_DIMENSION,
     MAX_EMBEDDING_BYTES,
     MAX_OVERSIZE_LINES,
@@ -337,7 +332,7 @@ class TestBuildEmbeddingInputs:
 class TestLazyModelLoading:
     def test_package_import_does_not_import_sentence_transformers(self):
         before = {m for m in sys.modules if "sentence_transformers" in m}
-        import deeporra.embeddings  # noqa: F811
+        import deeporra.embeddings  # noqa: F401,F811  (side-effect import check)
         after = {m for m in sys.modules if "sentence_transformers" in m}
         assert after == before
 
@@ -349,6 +344,7 @@ class TestLazyModelLoading:
         _inject_st(monkeypatch)
         orig_st = _FakeST
         model_names = []
+
         def fake_st(model_name="", **kw):
             model_names.append(model_name)
             return orig_st(model_name, **kw)
@@ -454,6 +450,7 @@ class TestEligibility:
 
     def test_all_skipped_does_not_load_model(self, monkeypatch):
         loaded = []
+
         class TrapST:
             def __init__(self, model_name="", **kw):
                 loaded.append(True)
@@ -464,11 +461,14 @@ class TestEligibility:
 
     def test_skipped_content_never_reaches_model(self, monkeypatch):
         model_inputs = []
+
         class Tracking:
             def __init__(self, model_name="", **kw):
                 pass
+
             def get_sentence_embedding_dimension(self):
                 return EXPECTED_DIMENSION
+
             def encode(self, texts, **kw):
                 model_inputs.extend(texts)
                 return [[0.1] * EXPECTED_DIMENSION for _ in texts]
@@ -616,8 +616,10 @@ class TestVectorValidation:
         class CountMismatch:
             def __init__(self, model_name="", **kw):
                 pass
+
             def get_sentence_embedding_dimension(self):
                 return EXPECTED_DIMENSION
+
             def encode(self, texts, **kw):
                 return [[0.1] * EXPECTED_DIMENSION]
         _inject_st(monkeypatch, CountMismatch)
@@ -648,11 +650,14 @@ class TestVectorValidation:
 class TestFailureHandling:
     def _make_failing(self, monkeypatch, fail_on_call=1):
         call_count = [0]
+
         class PartialFail:
             def __init__(self, model_name="", **kw):
                 pass
+
             def get_sentence_embedding_dimension(self):
                 return EXPECTED_DIMENSION
+
             def encode(self, texts, **kw):
                 call_count[0] += 1
                 if call_count[0] == fail_on_call:
@@ -681,11 +686,14 @@ class TestFailureHandling:
 
     def test_failed_batch_not_retried(self, monkeypatch):
         call_count = [0]
+
         class OnceFail:
             def __init__(self, model_name="", **kw):
                 pass
+
             def get_sentence_embedding_dimension(self):
                 return EXPECTED_DIMENSION
+
             def encode(self, texts, **kw):
                 call_count[0] += 1
                 raise RuntimeError("fail")
@@ -697,11 +705,14 @@ class TestFailureHandling:
 
     def test_later_batches_continue_after_earlier_failure(self, monkeypatch):
         call_records = []
+
         class Sequence:
             def __init__(self, model_name="", **kw):
                 pass
+
             def get_sentence_embedding_dimension(self):
                 return EXPECTED_DIMENSION
+
             def encode(self, texts, **kw):
                 call_records.append(len(texts))
                 if len(call_records) == 1:
@@ -752,11 +763,14 @@ class TestFailureHandling:
 
     def test_partial_success_invariant_correct(self, monkeypatch):
         call_count = [0]
+
         class Partial:
             def __init__(self, model_name="", **kw):
                 pass
+
             def get_sentence_embedding_dimension(self):
                 return EXPECTED_DIMENSION
+
             def encode(self, texts, **kw):
                 call_count[0] += 1
                 if call_count[0] == 1:
@@ -804,6 +818,7 @@ class TestDeterminismAndSafety:
         calls = []
         import builtins
         original = builtins.open
+
         def trap(*a, **kw):
             calls.append(a[0])
             return original(*a, **kw)

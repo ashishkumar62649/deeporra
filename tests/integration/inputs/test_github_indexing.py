@@ -2,7 +2,7 @@
 
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, ANY
+from unittest.mock import patch
 
 from deeporra.contracts import DeepOrraConfig, RepoInput
 from deeporra.inputs import RepositoryInputService

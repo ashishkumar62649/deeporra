@@ -6,8 +6,6 @@ import sys
 import shutil
 from pathlib import Path
 
-import pytest
-
 
 def _invoke(*args: str, timeout: int = 15) -> subprocess.CompletedProcess:
     """Run python -m deeporra <args> and capture stdout, stderr, return code."""

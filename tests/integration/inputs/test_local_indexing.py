@@ -1,6 +1,5 @@
 """Integration test: prepare a local folder, then scan it with the existing scanner."""
 
-import os
 import tempfile
 from pathlib import Path
 

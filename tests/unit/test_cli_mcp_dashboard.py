@@ -1,16 +1,11 @@
 """Focused tests for MCP and dashboard CLI commands – delegation, port, safety."""
 
 import json
-import os
-import signal
 import socket
 import subprocess
 import sys
 import threading
-import time
-from pathlib import Path
 
-import pytest
 
 from deeporra.cli.commands.dashboard_cmd import dashboard_cmd
 from deeporra.cli.commands.mcp_cmd import mcp_cmd
@@ -19,8 +14,6 @@ from deeporra.cli.commands.mcp_cmd import mcp_cmd
 class TestMCPCLI:
     def test_mcp_cmd_calls_real_server(self):
         assert mcp_cmd.__module__ is not None
-        import deeporra.mcp_server.__main__
-        from deeporra.mcp_server.__main__ import main as ref
         assert True
 
     def test_mcp_stray_stdout(self):
@@ -103,6 +96,7 @@ class TestDashboardCLI:
         )
         out = []
         err = []
+
         def _read_stream(stream, target):
             try:
                 data = stream.read()

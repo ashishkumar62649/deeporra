@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import pytest
 
@@ -351,7 +351,7 @@ class TestMissingIndex:
     """Verify missing or unindexed repository returns safe error strings."""
 
     def test_not_indexed_returns_string(self) -> None:
-        from deeporra.dashboard.api import safe_summary, safe_search, safe_symbols
+        from deeporra.dashboard.api import safe_summary
         qs = _FakeQueryService(raise_on="not_indexed")
         result = safe_summary(qs)
         assert isinstance(result, str)
@@ -648,4 +648,3 @@ class TestSafetyChecks:
         allowed = {"http_method"}
         extra = [w for w in http_keywords if w not in allowed]
         assert not extra, f"Unexpected http references: {extra}"
-

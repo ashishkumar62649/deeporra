@@ -143,7 +143,7 @@ class AlreadyIndexedRepositoryError(RuntimeError):
         self.path = path
         self.existing_repo_id = existing_repo_id
         super().__init__(
-            f"Repository row already exists for path"
+            "Repository row already exists for path"
         )
 
 

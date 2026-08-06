@@ -145,6 +145,7 @@ def test_repository_summary_delegates(monkeypatch):
         chunk_count=15, graph_node_count=30, graph_edge_count=25,
         warning_count=2, fatal_error_count=0,
     )
+
     class _FakeQS:
         def get_repository_summary(self):
             return fake_summary
@@ -164,6 +165,7 @@ def test_search_code_text_delegates(monkeypatch):
         display_text="def greet():", text_score=0.9, semantic_score=None,
         combined_score=0.9, match_source="text",
     )]
+
     class _FakeQS:
         def __init__(self, root): self.root = root
         def search_code(self, query, limit, mode): return fake_results
@@ -180,6 +182,7 @@ def test_search_code_text_delegates(monkeypatch):
 def test_semantic_unavailable_error_propagates(monkeypatch):
     class _FakeQS:
         def __init__(self, root): self.root = root
+
         def search_code(self, query, limit, mode):
             raise QueryValidationError("Semantic search is unavailable: the embedding model could not be loaded.")
     monkeypatch.setattr("deeporra.mcp_server.server.QueryService", _FakeQS)
@@ -196,6 +199,7 @@ def test_hybrid_degraded_text_only(monkeypatch):
         display_text="def greet():", text_score=0.9, semantic_score=None,
         combined_score=0.9, match_source="text",
     )]
+
     class _FakeQS:
         def __init__(self, root): self.root = root
         def search_code(self, query, limit, mode): return fake_results
@@ -213,6 +217,7 @@ def test_find_symbols_delegates(monkeypatch):
         semantic_key="s1", kind="function", qualified_name="Calculator.add",
         source_path="main.py", start_line=5, end_line=8, parent_semantic_key="Calculator",
     )]
+
     class _FakeQS:
         def __init__(self, root): self.root = root
         def find_symbols(self, query, exact, limit): return fake_symbols
@@ -230,6 +235,7 @@ def test_find_routes_delegates(monkeypatch):
         handler_name="calc_route", source_path="main.py", decorator_line=68,
         handler_start_line=69, handler_end_line=72,
     )]
+
     class _FakeQS:
         def __init__(self, root): self.root = root
         def find_routes(self, method, path_query, handler_query, limit): return fake_routes
@@ -247,6 +253,7 @@ def test_get_related_code_delegates(monkeypatch):
         qualified_name="some_func", source_path="main.py", relationship_type="calls",
         direction="outgoing", qualifier=None,
     )]
+
     class _FakeQS:
         def __init__(self, root): self.root = root
         def get_related(self, semantic_key, direction, edge_types, depth, limit): return fake_related
@@ -263,6 +270,7 @@ def test_analyze_change_impact_delegates(monkeypatch):
         target_semantic_key="n1", target_kind="function", target_qualified_name="greet",
         target_source_path="main.py", analysis_type="first_order",
     )
+
     class _FakeQS:
         def __init__(self, root): self.root = root
         def analyze_change_impact(self, semantic_key, limit): return fake_impact
@@ -285,6 +293,7 @@ def test_find_existing_implementation_composes(monkeypatch):
         semantic_key="s1", kind="function", qualified_name="greet",
         source_path="main.py", start_line=1, end_line=4, parent_semantic_key=None,
     )]
+
     class _FakeQS:
         def __init__(self, root): self.root = root
         def search_code(self, query, limit, mode): return fake_code
@@ -301,6 +310,7 @@ def test_find_existing_implementation_composes(monkeypatch):
 def test_missing_index_error_propagates(monkeypatch):
     class _FakeQS:
         def __init__(self, root): self.root = root
+
         def get_repository_summary(self):
             raise RepositoryNotIndexedError("Repository at /fake has no active index.")
     monkeypatch.setattr("deeporra.mcp_server.server.QueryService", _FakeQS)
@@ -312,6 +322,7 @@ def test_missing_index_error_propagates(monkeypatch):
 def test_invalid_query_error_propagates(monkeypatch):
     class _FakeQS:
         def __init__(self, root): self.root = root
+
         def search_code(self, query, limit, mode):
             raise QueryValidationError("Query must not be blank.")
     monkeypatch.setattr("deeporra.mcp_server.server.QueryService", _FakeQS)
@@ -324,6 +335,7 @@ def test_invalid_query_error_propagates(monkeypatch):
 def test_invalid_limit_error_propagates(monkeypatch):
     class _FakeQS:
         def __init__(self, root): self.root = root
+
         def search_code(self, query, limit, mode):
             raise QueryValidationError("Limit must be a positive integer.")
     monkeypatch.setattr("deeporra.mcp_server.server.QueryService", _FakeQS)
@@ -347,8 +359,10 @@ def test_hybrid_search_delegates(monkeypatch):
         display_text="def greet():", text_score=0.9, semantic_score=0.8,
         combined_score=0.85, match_source="hybrid",
     )]
+
     class _FakeQS:
         def __init__(self, root): self.root = root
+
         def search_code(self, query, limit, mode):
             assert mode == "hybrid"
             return fake_results
@@ -363,9 +377,11 @@ def test_hybrid_search_delegates(monkeypatch):
 
 def test_hybrid_search_passes_params(monkeypatch):
     captured = {}
+
     class _FakeQS:
         def __init__(self, root):
             captured["root"] = root
+
         def search_code(self, query, limit, mode):
             captured["query"] = query
             captured["limit"] = limit
@@ -415,6 +431,7 @@ def test_hybrid_search_normal_results_serialize(monkeypatch):
         display_text="def greet():", text_score=0.9, semantic_score=0.8,
         combined_score=0.85, match_source="hybrid",
     )]
+
     class _FakeQS:
         def __init__(self, root): self.root = root
         def search_code(self, query, limit, mode): return fake_results
@@ -442,6 +459,7 @@ def test_hybrid_search_degraded_text_only_no_semantic(monkeypatch):
         display_text="def util():", text_score=0.85, semantic_score=None,
         combined_score=0.85, match_source="text",
     )]
+
     class _FakeQS:
         def __init__(self, root): self.root = root
         def search_code(self, query, limit, mode): return fake_results
@@ -457,6 +475,7 @@ def test_hybrid_search_degraded_text_only_no_semantic(monkeypatch):
 def test_hybrid_search_qs_error_propagates(monkeypatch):
     class _FakeQS:
         def __init__(self, root): self.root = root
+
         def search_code(self, query, limit, mode):
             raise QueryValidationError("Semantic search is unavailable.")
     monkeypatch.setattr("deeporra.mcp_server.server.QueryService", _FakeQS)

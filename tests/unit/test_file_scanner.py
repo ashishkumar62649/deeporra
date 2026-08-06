@@ -244,6 +244,7 @@ def test_symlinked_file_skipped_without_opening(monkeypatch):
         monkeypatch.setattr(os.path, "islink", lambda p: p == link_path)
         calls = []
         original_open = builtins.open
+
         def no_open(*args, **kwargs):
             calls.append(args)
             return original_open(*args, **kwargs)

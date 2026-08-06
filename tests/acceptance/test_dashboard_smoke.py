@@ -17,6 +17,7 @@ import pytest
 
 SMOKE_TIMEOUT = 30
 
+
 @pytest.fixture(scope="module")
 def _free_port() -> int:
     """Return a port guaranteed free at fixture-creation time."""

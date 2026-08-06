@@ -1,8 +1,10 @@
 """Default configuration values."""
 
+from typing import Any
+
 DEFAULT_SCHEMA_VERSION = 1
 
-DEFAULT_CONFIG = {
+DEFAULT_CONFIG: dict[str, Any] = {
     "schema_version": DEFAULT_SCHEMA_VERSION,
     "embedding": {
         "provider": "sentence_transformers",

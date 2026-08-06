@@ -1,9 +1,6 @@
 """Contract compatibility tests — verify WP3 modules satisfy canonical contracts."""
 
-import ast
 import os
-import uuid
-import pytest
 
 from deeporra.contracts import (
     ChunkType,
@@ -16,7 +13,6 @@ from deeporra.contracts import (
     SymbolType,
 )
 from deeporra.contracts import (
-    GraphBuildResult,
     GraphEdgeInput,
     GraphNodeInput,
     ParsedFile,
@@ -26,11 +22,6 @@ from deeporra.contracts import (
     ScanResult,
     ScannedFile,
     SkippedFileDiagnostic,
-)
-from deeporra.contracts.interfaces import (
-    GraphBuilderProtocol,
-    PythonParserProtocol,
-    ScannerProtocol,
 )
 
 
@@ -147,6 +138,7 @@ class TestParserContract:
         import builtins
         original_open = builtins.open
         calls = []
+
         def tracking_open(*args, **kwargs):
             calls.append(args)
             return original_open(*args, **kwargs)
@@ -156,7 +148,7 @@ class TestParserContract:
         try:
             sf = ScannedFile(file_path="nonexistent.py", safe_content="x=1\n",
                              file_type=FileType.SOURCE, content_hash="abc")
-            result = parse(sf)
+            parse(sf)
             file_calls = [c for c in calls if "nonexistent" in str(c)]
             assert len(file_calls) == 0
         finally:
@@ -272,7 +264,7 @@ def list_users():
 
 class TestGraphContract:
     def _make_pf(self, symbols=None, routes=None, imports=None, file_path="mod.py",
-                  file_type=FileType.SOURCE):
+                 file_type=FileType.SOURCE):
         pf = ParsedFile(file_path=file_path, file_type=file_type,
                         status=ParseStatus.PARSED, file_id=f"file:{file_path}")
         if symbols:
@@ -435,7 +427,9 @@ class TestSecretSafety:
         assert "sk_test" not in d.details
 
     def test_real_scan_hides_secret_from_serialized_scannedfile(self):
-        import tempfile, json, dataclasses
+        import tempfile
+        import json
+        import dataclasses
         from deeporra.scanner.file_scanner import scan
         from deeporra.contracts import DeepOrraConfig, RepoInput
         original_secret = "sk_test_ABCdef789GHIJklmnop1234"
@@ -455,7 +449,9 @@ class TestSecretSafety:
             assert "[REDACTED]" in serialized
 
     def test_real_scan_hides_secret_from_serialized_scanresult(self):
-        import tempfile, json, dataclasses
+        import tempfile
+        import json
+        import dataclasses
         from deeporra.scanner.file_scanner import scan
         from deeporra.contracts import DeepOrraConfig, RepoInput
         original_secret = "ghp_ABCdef789GHIJklmnop1234XYZabc"

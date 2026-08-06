@@ -57,7 +57,7 @@ def build_embedding_inputs(
         if not chunk.chunk_id:
             raise ValueError("chunk has empty chunk_id")
         if chunk.chunk_id in seen_chunk_ids:
-            raise ValueError(f"duplicate chunk_id")
+            raise ValueError("duplicate chunk_id")
         seen_chunk_ids.add(chunk.chunk_id)
 
         if chunk.start_line < 1 or chunk.end_line < chunk.start_line:
@@ -166,7 +166,7 @@ class EmbeddingEncoder:
                     show_progress_bar=False,
                     convert_to_numpy=True,
                 )
-            except Exception as exc:
+            except Exception:
                 for inp in batch:
                     result.fail_count += 1
                     result.warnings.append({

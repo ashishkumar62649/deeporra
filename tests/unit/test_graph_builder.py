@@ -1,11 +1,11 @@
 """Tests for graph_builder.py."""
 
 from deeporra.contracts import (
-    Confidence, FileType, GraphBuildResult, GraphNodeInput, GraphNodeType,
-    GraphRelation, HttpMethod, ParsedFile, ParsedImport, ParsedRoute,
-    ParsedSymbol, ParseStatus, SymbolType,
+    Confidence, FileType, GraphBuildResult, GraphNodeType, GraphRelation,
+    HttpMethod, ParsedFile, ParsedImport, ParsedRoute, ParsedSymbol,
+    ParseStatus, SymbolType,
 )
-from deeporra.graph.graph_builder import build, _infer_tested_name
+from deeporra.graph.graph_builder import build
 
 
 def _pf(path: str) -> ParsedFile:
@@ -97,7 +97,7 @@ def test_route_node():
     assert len(r_nodes) >= 1
 
 
-def test_handles_route_edge():
+def test_handles_route_defines_edge():
     rid = "route:GET:/users"
     pf = _pf("routes.py")
     pf.routes.append(_route("users", "list_users", route_id=rid))
@@ -208,7 +208,7 @@ def test_edge_count_greater_than_zero_with_symbols():
 def test_inherits_edge():
     base = _sym("Base", SymbolType.CLASS, symbol_id="sym:Base")
     child = _sym("Child", SymbolType.CLASS, symbol_id="sym:Child",
-                  metadata={"bases": ["Base"]})
+                 metadata={"bases": ["Base"]})
     pf = _pf("mod.py")
     pf.symbols.extend([base, child])
     result = build([pf])
@@ -220,7 +220,7 @@ def test_inherits_edge():
 
 def test_calls_edge():
     caller = _sym("caller", SymbolType.FUNCTION, symbol_id="sym:caller",
-                   metadata={"calls": ["callee"]})
+                  metadata={"calls": ["callee"]})
     callee = _sym("callee", SymbolType.FUNCTION, symbol_id="sym:callee")
     pf = _pf("mod.py")
     pf.symbols.extend([caller, callee])

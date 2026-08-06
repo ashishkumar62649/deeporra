@@ -14,7 +14,7 @@ import anyio
 import pytest
 
 from deeporra.chunking import Chunker
-from deeporra.contracts import DeepOrraConfig, IndexState, RepoInput
+from deeporra.contracts import DeepOrraConfig, IndexState
 from deeporra.embeddings import EmbeddingEncoder
 from deeporra.graph.graph_builder import build_graph
 from deeporra.indexing import IndexService
@@ -148,8 +148,8 @@ async def test_mcp_stdio_smoke(indexed_repo):
 
         # Send requests
         init_msg = JSONRPCMessage(jsonrpc="2.0", id=1, method="initialize",
-                                   params={"protocolVersion": "2024-11-05", "capabilities": {},
-                                           "clientInfo": {"name": "test", "version": "0.1.0"}})
+                                  params={"protocolVersion": "2024-11-05", "capabilities": {},
+                                          "clientInfo": {"name": "test", "version": "0.1.0"}})
         await to_server_send.send(SessionMessage(message=init_msg))
 
         notif_msg = JSONRPCMessage(jsonrpc="2.0", method="notifications/initialized")
@@ -159,8 +159,8 @@ async def test_mcp_stdio_smoke(indexed_repo):
         await to_server_send.send(SessionMessage(message=list_msg))
 
         call_msg = JSONRPCMessage(jsonrpc="2.0", id=3, method="tools/call",
-                                   params={"name": "repository_summary",
-                                           "arguments": {"repository_root": indexed_repo}})
+                                  params={"name": "repository_summary",
+                                          "arguments": {"repository_root": indexed_repo}})
         await to_server_send.send(SessionMessage(message=call_msg))
 
         # Give the server time to process before closing
@@ -184,8 +184,8 @@ async def test_mcp_stdio_smoke(indexed_repo):
     assert isinstance(tools_result, dict), f"tools_result is {type(tools_result)}: {tools_result}"
     tool_names = [t["name"] if isinstance(t, dict) else t.name for t in tools_result["tools"]]
     for name in ["repository_summary", "search_code", "hybrid_search",
-                  "find_symbols", "find_routes", "get_related_code",
-                  "analyze_change_impact", "find_existing_implementation"]:
+                 "find_symbols", "find_routes", "get_related_code",
+                 "analyze_change_impact", "find_existing_implementation"]:
         assert name in tool_names
 
     call_resp = responses[2]

@@ -329,11 +329,11 @@ def build_graph(parsed_files: Sequence[ParsedFile]) -> GraphBuildResult:
     # Append edges for inherits, calls, and tests. These use canonical
     # dedup so order between alphabetic and reverse doesn't matter.
     _add_inherits_edges(edges, edge_record_id_set, seen_canonical_edges,
-                         symbol_by_id, symbol_by_name, node_id_for_sym_id)
+                        symbol_by_id, symbol_by_name, node_id_for_sym_id)
     _add_calls_edges(edges, edge_record_id_set, seen_canonical_edges,
-                       symbol_by_id, symbol_by_name, node_id_for_sym_id)
+                     symbol_by_id, symbol_by_name, node_id_for_sym_id)
     _add_tests_edges(edges, edge_record_id_set, seen_canonical_edges,
-                       symbol_by_id, symbol_by_name, node_id_for_sym_id)
+                     symbol_by_id, symbol_by_name, node_id_for_sym_id)
 
     _enforce_invariants(nodes, edges, node_record_id_set, edge_record_id_set, node_id_set)
 

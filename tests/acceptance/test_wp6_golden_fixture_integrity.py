@@ -10,7 +10,8 @@ EXPECTED_FIXTURE_DIGESTS = {
 
 def test_manifests_are_complete_and_fixture_bytes_match():
     manifests = sorted((ROOT / "manifests").glob("*.json"))
-    assert {path.stem for path in manifests} == {"python_service", "errors_and_secrets", "paths_and_unicode", "docs_and_config", "relationships_and_duplicates", "empty_repo", "minimal_repo", "non_execution_tripwire"}
+    assert {path.stem for path in manifests} == {"python_service", "errors_and_secrets", "paths_and_unicode",
+                                                 "docs_and_config", "relationships_and_duplicates", "empty_repo", "minimal_repo", "non_execution_tripwire"}
     for path in manifests:
         manifest = json.loads(path.read_text(encoding="utf-8"))
         repo = ROOT / "repos" / manifest["fixture_name"]

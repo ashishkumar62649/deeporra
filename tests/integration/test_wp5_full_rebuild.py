@@ -222,15 +222,15 @@ def test_failed_replacement_preserves_active_generation_at_each_boundary(
     _write_b(repo)
 
     original_mkdir = Path.mkdir
-    original_persist = full_rebuild.run_step4_persistence
-    original_open = ChromaStore.open
-    original_upsert = ChromaStore.upsert_embeddings
-    original_get = ChromaStore.get_embeddings
-    original_graph_store = full_rebuild.GraphStore
-    original_store_graph = GraphStore.store_graph
-    original_nodes = GraphStore.get_nodes
+    full_rebuild.run_step4_persistence
+    ChromaStore.open
+    ChromaStore.upsert_embeddings
+    ChromaStore.get_embeddings
+    full_rebuild.GraphStore
+    GraphStore.store_graph
+    GraphStore.get_nodes
     original_status = SQLiteStore.update_index_status
-    original_close = ChromaStore.close
+    ChromaStore.close
     original_write = Path.write_text
     original_replace = Path.replace
     original_verify = FullRebuildCoordinator._verify_generation
@@ -280,6 +280,7 @@ def test_failed_replacement_preserves_active_generation_at_each_boundary(
         monkeypatch.setattr(Path, "replace", fail_pointer_replace)
     else:
         calls = {"count": 0}
+
         def fail_active_verify(self, *args, **kwargs):
             calls["count"] += 1
             if calls["count"] == 3:
@@ -342,18 +343,22 @@ def test_run_index_uses_one_complete_pipeline_attempt(tmp_path, monkeypatch):
         def scan(self, *args):
             calls["scan"] += 1
             return super().scan(*args)
+
     class Parser(_Parser):
         def parse(self, *args):
             calls["parse"] += 1
             return super().parse(*args)
+
     class CountChunker(Chunker):
         def chunk(self, *args):
             calls["chunk"] += 1
             return super().chunk(*args)
+
     class CountEncoder(EmbeddingEncoder):
         def encode(self, *args):
             calls["encode"] += 1
             return super().encode(*args)
+
     class Builder(_GraphBuilder):
         def build(self, *args):
             calls["graph"] += 1
@@ -437,6 +442,7 @@ def test_cross_store_mismatch_is_rejected_before_promotion(tmp_path, monkeypatch
         monkeypatch.setattr(FTSStore, "get_chunk_index_entries", lambda self, *args: [(None, None)])
     elif mismatch == "chroma_unexpected_id":
         original = ChromaStore.get_embeddings
+
         def extra_vector(self, *args):
             result = original(self, *args)
             result["ids"] = list(result.get("ids") or []) + ["foreign-chunk-id"]

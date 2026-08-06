@@ -1,10 +1,9 @@
 """Tests for GitHub preparation with mocked subprocess."""
 
-import os
 import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import ANY, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -16,7 +15,6 @@ from deeporra.inputs.errors import (
 from deeporra.inputs.github_preparation import (
     _clone,
     _ensure_git_available,
-    _rev_parse_head,
     _run_git,
     prepare_github,
 )
