@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Full README rewrite with architecture diagram, quick-start guide, and usage documentation
 - Pinned `mcp<2.0` so the `mcp.server.fastmcp` import path stays stable on fresh installs
+- Split pure validation helpers out of `index_service` into `deeporra/indexing/validation.py` (god-class reduction)
+- Moved FTS row projections (`to_file_rows`/`to_symbol_rows`/`to_chunk_rows`) into the storage layer (`deeporra/storage/sqlite_store.py`)
+- Added `flake8` and `mypy` to the `dev` extras; `make clean` is now cross-platform
+- Repo-wide lint sweep: zero flake8 and mypy violations; flake8 configured with `max-line-length = 200`
+
+### Fixed
+
+- FutureWarning from renamed `get_embedding_dimension` API in the Sentence Transformers encoder (fallback keeps old-name support)
 
 ---
 
