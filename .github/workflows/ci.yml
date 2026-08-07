@@ -56,6 +56,18 @@ jobs:
           HF_HUB_OFFLINE: 1
           TRANSFORMERS_OFFLINE: 1
           TOKENIZERS_PARALLELISM: false
+      - name: Lint (flake8)
+        run: python -m flake8 deeporra/ tests/
+        env:
+          HF_HUB_OFFLINE: 1
+          TRANSFORMERS_OFFLINE: 1
+          TOKENIZERS_PARALLELISM: false
+      - name: Type check (mypy)
+        run: python -m mypy deeporra/ --ignore-missing-imports
+        env:
+          HF_HUB_OFFLINE: 1
+          TRANSFORMERS_OFFLINE: 1
+          TOKENIZERS_PARALLELISM: false
       - name: Check test collection
         run: python -m pytest --collect-only -q
         env:
