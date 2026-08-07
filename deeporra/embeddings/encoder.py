@@ -230,7 +230,7 @@ class EmbeddingEncoder:
             else:
                 os.environ["TRANSFORMERS_OFFLINE"] = old_tf
 
-        dim = self._model.get_sentence_embedding_dimension()
+        dim = getattr(self._model, "get_embedding_dimension", self._model.get_sentence_embedding_dimension)()
         if dim != EXPECTED_DIMENSION:
             raise EmbeddingEncoderError(
                 ErrorCode.EMBEDDING_DIMENSION_MISMATCH,
