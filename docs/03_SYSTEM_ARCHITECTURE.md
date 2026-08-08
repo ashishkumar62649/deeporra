@@ -2,7 +2,7 @@
 
 ## 1. Architecture Summary
 
-Current runtime interfaces are `deeporra index`, `deeporra status`, and `deeporra doctor`. MCP, dashboard, retrieval, and setup workflows are deferred.
+Current runtime interfaces are `deeporra index`, `deeporra status`, and `deeporra doctor`. MCP, dashboard, and retrieval ship in the v0.1.0 build (see `docs/releases/v0.1.0.md`); only `setup` remains a deferred stub.
 
 DeepOrra is a local-first Python CLI package with three interfaces:
 - **CLI** — primary entry point for indexing and management
@@ -13,7 +13,7 @@ All interfaces share the same local storage layer (SQLite + Chroma) and the same
 
 ## 2. Local-First Architecture
 
-Only the CLI path is active in the current build. The MCP and dashboard paths in this diagram are deferred target architecture.
+The CLI, MCP (stdio), and dashboard paths in this diagram are all active in the v0.1.0 build.
 
 ```
 User's Laptop
@@ -34,14 +34,14 @@ No network calls during operation. No cloud services. No external APIs.
 |---------|------|-------------|-------------|
 | `deeporra index <repo_path>` | Indexing | Scan, parse, embed, build graph | Functional |
 | `deeporra status [repo_path]` | Status | Show index status and stats | Functional |
-| `deeporra dashboard` | Dashboard | Start Streamlit on localhost | Stub (exit 2) |
-| `deeporra mcp --repo <repo_path>` | MCP Server | Start MCP stdio server | Stub (exit 2) |
+| `deeporra dashboard` | Dashboard | Start Streamlit on localhost | Functional |
+| `deeporra mcp --repo <repo_path>` | MCP Server | Start MCP stdio server | Functional |
 | `deeporra doctor` | Diagnostics | Check dependencies and health | Functional |
 | `deeporra setup <agent> --repo <repo_path>` | Setup | Configure agent integration | Stub (exit 2) |
 
 **Chunking data flow:** The chunker is the only component that creates `CodeChunk` values. It receives sanitized text from `ScannedFile.safe_content` and Python structure from `ParsedFile`. It never reopens original repository files. Python chunks use `ParsedFile` symbols, imports, and routes for structure. Markdown/RST, config, and generic-text chunks use only `ScannedFile.safe_content`. The scanner is the only component that reads original repository files.
 
-**First-slice stub behavior:** `dashboard`, `mcp`, and `setup` commands accept their documented arguments, perform no subprocess launch, perform no network operation, perform no file modification, print `"This command is not available in the first implementation slice."`, and exit with code `2`. Their CLI help text identifies them as deferred.
+**Stub behavior:** only `setup` remains a stub in v0.1.0. It accepts its documented argument, performs no subprocess launch, performs no network operation, performs no file modification, prints `"This command is not available in the first implementation slice."`, and exits with code `2`. Its CLI help text identifies it as deferred.
 
 ## 4. CLI Architecture
 
@@ -103,7 +103,7 @@ Storage Layer
     └── .deeporra/reports/ (generated reports)
 ```
 
-## 7. Deferred Retrieval Architecture
+## 7. Retrieval Architecture (superseded — retrieval shipped in v0.1.0)
 
 ```
 Retrieval Layer
@@ -131,7 +131,7 @@ Code Graph (first implementation slice)
 
 **Ownership:** `deeporra/graph/graph_builder.py` is owned by the Scanner/Parser Agent. `deeporra/graph/graph_traverser.py` and `deeporra/graph/impact_analyzer.py` are owned by the Retrieval/Graph Agent (later phase).
 
-## 9. Deferred MCP Server Architecture
+## 9. MCP Server Architecture (shipped in v0.1.0)
 
 ```
 MCP Server (stdio transport)
@@ -152,7 +152,7 @@ MCP Server (stdio transport)
     └── tool_call_logs table
 ```
 
-## 10. Deferred Dashboard Architecture
+## 10. Dashboard Architecture (shipped in v0.1.0)
 
 ```
 Streamlit Dashboard (localhost:8501)

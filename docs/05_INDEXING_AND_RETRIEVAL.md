@@ -2,7 +2,7 @@
 
 ## 1. Indexing Overview
 
-`deeporra index` and `deeporra status` are active. Retrieval/search workflows are deferred; historical Step references below do not defer those active commands.
+`deeporra index` and `deeporra status` are active. Text, semantic, and hybrid search ship in v0.1.0 via `deeporra/querying/` (see `docs/releases/v0.1.0.md`); the dedicated `hybrid_ranker.py`, `graph_traverser.py`, and `impact_analyzer.py` modules remain future work.
 
 Indexing is the process of scanning a repository, parsing code, creating chunks, generating embeddings, building the code graph, and storing everything locally.
 

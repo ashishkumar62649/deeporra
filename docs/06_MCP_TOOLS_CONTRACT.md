@@ -27,18 +27,20 @@ Current build MCP tools must NOT:
 
 ## 5. Current Build Tool List
 
+> **v0.1.0 update:** the shipped server implements the tool set below (verified against `deeporra/mcp_server/server.py` and documented in `docs/releases/v0.1.0.md` and `docs/RELEASE_CHECKLIST.md` Section 6). Sections 6.x below describe the original planning tool set (`find_symbol`, `get_file_context`, `find_related_files`, `check_existing_implementation`, `plan_minimal_change`, `find_related_tests`, `explain_change_impact`) and are superseded historical design; shipped schemas live in `deeporra/mcp_server/server.py`.
+
 | Tool | Purpose |
 |------|---------|
-| `search_code` | Semantic + keyword search for code |
-| `find_symbol` | Exact symbol lookup by name |
-| `get_file_context` | Get file summary and structure |
-| `find_related_files` | Find files related to a target via graph |
-| `check_existing_implementation` | Check if functionality already exists |
-| `plan_minimal_change` | Recommend minimal changes for a task |
-| `find_related_tests` | Find tests related to a function/file |
-| `explain_change_impact` | Analyze what breaks if a file changes |
+| `repository_summary` | Return summary statistics for an indexed repository |
+| `search_code` | Search code chunks by text, semantic, or hybrid mode |
+| `hybrid_search` | Search code using combined text + semantic ranking |
+| `find_symbols` | Find symbols (functions, classes, methods) matching a name query |
+| `find_routes` | Find HTTP route definitions by method, path, or handler |
+| `get_related_code` | Find related code nodes through graph edges (one-hop) |
+| `analyze_change_impact` | First-order change impact analysis for a symbol |
+| `find_existing_implementation` | Candidate locations for code matching a description |
 
-## 6. Tool Schemas
+## 6. Tool Schemas (historical planning set — shipped schema set is in Section 5)
 
 ### 6.1 search_code
 

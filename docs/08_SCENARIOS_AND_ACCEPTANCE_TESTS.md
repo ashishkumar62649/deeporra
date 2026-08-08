@@ -791,12 +791,12 @@ Every scenario below defines: fixture, command/function, expected status, expect
 
 ---
 
-### SC-IND-032: Deferred CLI Commands Exit with Code 2
+### SC-IND-032: Deferred CLI Stub Exits with Code 2
 
 **Fixture:** Any indexed repository
-**Command:** `deeporra dashboard`, `deeporra mcp --repo /path/to/repo`, `deeporra setup cursor --repo /path/to/repo`
+**Command:** `deeporra setup cursor --repo /path/to/repo` (in v0.1.0 this is the only remaining deferred stub; `deeporra dashboard` and `deeporra mcp` are functional commands)
 **Expected status:** N/A (no indexing)
-**Expected exit code:** 2 for all three commands
+**Expected exit code:** 2
 **Expected SQLite rows:** no changes
 **Expected Chroma vectors:** no changes
 **Expected warnings/errors:** output contains "This command is not available in the first implementation slice."
@@ -883,7 +883,7 @@ Every scenario below defines: fixture, command/function, expected status, expect
 **Expected status:** N/A (file existence check)
 **Expected exit code:** N/A
 **Expected test files:**
-- `tests/unit/test_index_cmd.py`, `test_status_cmd.py`, `test_doctor_cmd.py`, `test_deferred_commands.py` — CLI/Config Agent
+- `tests/unit/test_index_cmd.py`, `test_status_cmd.py`, `test_doctor_cmd.py`, `test_cli_mcp_dashboard.py` — CLI/Config Agent
 - `tests/unit/test_file_scanner.py`, `test_ignore_rules.py`, `test_secret_detector.py`, `test_python_ast.py`, `test_symbol_extractor.py`, `test_import_extractor.py`, `test_route_detector.py`, `test_graph_builder.py` — Scanner/Parser Agent
 - `tests/unit/test_sqlite_store.py`, `test_chroma_store.py`, `test_graph_store.py`, `test_fts_store.py` — Storage Agent
 - `tests/unit/test_chunker.py`, `test_encoder.py` — Chunking/Embeddings Agent

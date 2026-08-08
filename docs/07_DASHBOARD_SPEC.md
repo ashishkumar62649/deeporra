@@ -41,13 +41,16 @@ The dashboard binds to `127.0.0.1:8501`. No configuration for remote access. No 
 
 ## 5. Pages
 
+> **v0.1.0:** shipped pages (verified against `deeporra/dashboard/app.py`). Sections 6–10 below describe the original five-page planning design (Connect Repository, Indexing Status, Repository Wiki, Ask Repository, Agent Tools Preview) and are superseded historical reference.
+
 | Page | Purpose | Key Components |
 |------|---------|----------------|
-| 1. Connect Repository | Add repository for indexing | URL input, ZIP upload, index button |
-| 2. Indexing Status | View indexing progress and results | Progress bar, stats, error messages |
-| 3. Repository Wiki | Browse repository structure | Tree view, symbols, summary, routes |
-| 4. Ask Repository | Ask questions, see evidence | Question input, answer display, evidence cards |
-| 5. Agent Tools Preview | Test MCP tools manually | Tool selector, input form, output display |
+| Repository Overview | Repository summary and statistics | Summary metrics, counts, import/router info |
+| Code Search | Search code | Query input, mode selector, results list |
+| Symbols | Browse symbols | Symbol search and listing |
+| Routes | Browse HTTP routes | Method/path/handler display |
+| Related Code | Graph exploration | Target input, edge type filters, results |
+| Change Impact | Change impact preview | Target input, direct/indirect impact lists |
 
 ## 6. Page 1: Connect Repository
 

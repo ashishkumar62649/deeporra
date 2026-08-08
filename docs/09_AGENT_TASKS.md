@@ -153,10 +153,8 @@ that every feature module depends on. Eliminate duplicate definitions across mod
 - `deeporra status [repo_path]` — query SQLite for index status, print
 - `deeporra doctor` — check dependencies (Python version, imports, model availability)
 
-**Deferred stubs (exit code 2):**
-- `deeporra dashboard` — print "This command is not available in the first implementation slice.", exit 2
-- `deeporra mcp --repo <repo_path>` — same
-- `deeporra setup <agent> --repo <repo_path>` — same
+**Deferred stubs (exit code 2) — v0.1.0 status: only `setup` remains a stub; `dashboard` and `mcp` shipped functional (see `docs/releases/v0.1.0.md`):**
+- `deeporra setup <agent> --repo <repo_path>` — print "This command is not available in the first implementation slice.", exit 2
 
 **Expected Outputs:**
 - `deeporra/cli/main.py` — Typer app (entry point: `deeporra.cli.main:app`)
@@ -174,7 +172,7 @@ that every feature module depends on. Eliminate duplicate definitions across mod
 - `tests/unit/test_index_cmd.py`
 - `tests/unit/test_status_cmd.py`
 - `tests/unit/test_doctor_cmd.py`
-- `tests/unit/test_deferred_commands.py`
+- `tests/unit/test_cli_mcp_dashboard.py` (supersedes the planned `test_deferred_commands.py`; covers the only remaining stub `setup` plus the shipped `mcp`/`dashboard` commands)
 
 **Documentation Updates:**
 - Update `docs/03_SYSTEM_ARCHITECTURE.md` if folder structure changes
@@ -467,7 +465,7 @@ All seven WP5 steps are complete. The indexing pipeline provides state machine c
 
 ### WP6 — Acceptance and Release Readiness
 
-WP6 is acceptance and release-readiness work for the completed WP5 indexing slice: run the acceptance matrix, verify operational behavior and documentation truth, and record release evidence. It does not reimplement WP5 indexing, persistence, promotion, or CLI activation. MCP, dashboard, and retrieval implementation remain deferred beyond WP6.
+WP6 is acceptance and release-readiness work for the completed WP5 indexing slice: run the acceptance matrix, verify operational behavior and documentation truth, and record release evidence. It does not reimplement WP5 indexing, persistence, promotion, or CLI activation. MCP, dashboard, and retrieval implementation shipped during WP6 (see `docs/releases/v0.1.0.md`); the deferred design sections in docs 01/03 were superseded.
 
 ### Historical WP5 Planning Record (superseded)
 
@@ -639,7 +637,7 @@ WP6 is acceptance and release-readiness work for the completed WP5 indexing slic
 
 | Agent | Owned Test Files |
 |-------|-----------------|
-| CLI/Config Agent | `tests/unit/test_index_cmd.py`, `test_status_cmd.py`, `test_doctor_cmd.py`, `test_deferred_commands.py`, config/utility tests |
+| CLI/Config Agent | `tests/unit/test_index_cmd.py`, `test_status_cmd.py`, `test_doctor_cmd.py`, `test_cli_mcp_dashboard.py`, config/utility tests |
 | Storage Agent | `tests/unit/test_sqlite_store.py`, `test_chroma_store.py`, `test_graph_store.py`, `test_fts_store.py` |
 | Scanner/Parser Agent | `tests/unit/test_file_scanner.py`, `test_ignore_rules.py`, `test_secret_detector.py`, `test_python_ast.py`, `test_symbol_extractor.py`, `test_import_extractor.py`, `test_route_detector.py`, `test_graph_builder.py` |
 | Chunking/Embeddings Agent | `tests/unit/test_chunker.py`, `test_encoder.py` |

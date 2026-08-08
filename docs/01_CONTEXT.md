@@ -71,7 +71,7 @@ DeepOrra solves this by giving agents a local intelligence layer that answers "d
 
 ## 7. Current Build Scope
 
-MCP, dashboard, and retrieval user workflows are deferred in the current build.
+MCP, dashboard, and retrieval user workflows ship in the v0.1.0 build; see `docs/releases/v0.1.0.md` for the shipped feature set.
 
 - Python CLI package (`deeporra`)
 - SQLite for metadata, graph, and keyword search
@@ -161,7 +161,7 @@ All storage is local:
 - Generated reports in `.deeporra/reports/` directory
 - No cloud database, no remote storage
 
-## 18. Deferred Retrieval Direction
+## 18. Retrieval Direction (superseded — shipped in v0.1.0 via `deeporra/querying/`; historical design below)
 
 Hybrid retrieval combining:
 1. Semantic vector search (Chroma + Sentence Transformers)
@@ -181,7 +181,7 @@ Lightweight native graph layer:
 - In-memory traversal allowed only in tests and debugging utilities
 - No NetworkX dependency in current build (optional later)
 
-## 20. Deferred MCP Direction
+## 20. MCP Direction (superseded — MCP server shipped in v0.1.0; historical tool list below)
 
 MCP tools are read-only and planning-only:
 - `search_code` — semantic + keyword search
@@ -193,7 +193,7 @@ MCP tools are read-only and planning-only:
 - `find_related_tests` — test discovery
 - `explain_change_impact` — impact analysis
 
-## 21. Deferred Dashboard Direction
+## 21. Dashboard Direction (superseded — dashboard shipped in v0.1.0; historical page list below)
 
 Five pages:
 1. Connect Repository — upload ZIP or enter GitHub URL
